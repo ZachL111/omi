@@ -103,8 +103,8 @@ export async function handleAuthCallback(callbackUrl: string): Promise<boolean> 
   const code = parsed.searchParams.get('code')
   const state = parsed.searchParams.get('state')
   if (!code) return false
-  if (pendingState && state !== pendingState) {
-    console.error('auth: state mismatch, rejecting callback')
+  if (!pendingState || state !== pendingState) {
+    console.error('auth: state mismatch or no sign-in in progress, rejecting callback')
     return false
   }
   pendingState = null

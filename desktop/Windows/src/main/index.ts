@@ -23,8 +23,10 @@ const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
-  if (process.defaultApp && process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient(PROTOCOL_SCHEME, process.execPath, [join(process.argv[1])])
+  if (process.defaultApp) {
+    // Dev: register "electron.exe <absolute app path> <url>" so browser-launched
+    // callbacks resolve regardless of the browser's working directory.
+    app.setAsDefaultProtocolClient(PROTOCOL_SCHEME, process.execPath, [app.getAppPath()])
   } else {
     app.setAsDefaultProtocolClient(PROTOCOL_SCHEME)
   }
