@@ -1,0 +1,181 @@
+import { create } from 'zustand'
+import { api } from '../api/client'
+import type { ServerConversation } from '../api/types'
+import type { TranscriptSegment } from '../../../shared/types'
+import { PcmCapture } from '../lib/audio'
+
+interface ConversationsStore {
+  items: ServerConversation[]
+  loading: boolean
+  selectedId: string | null
+  selected: ServerConversation | null
+  searchQuery: string
+  error: string | null
+  load: () => Promise<void>
+  select: (id: string | null) => Promise<void>
+  search: (q: string) => Promise<void>
+  toggleStar: (id: string) => Promise<void>
+  remove: (id: string) => Promise<void>
+  rename: (id: string, title: string) => Promise<void>
+}
+
+export const useConversations = create<ConversationsStore>((set, get) => ({
+  items: [],
+  loading: false,
+  selectedId: null,
+  selected: null,
+  searchQuery: '',
+  error: null,
+  load: async () => {
+    set({ loading: true, error: null })
+    try {
+      const items = await api.listConversations(50, 0)
+      set({ items, loading: false })
+    } catch (e) {
+      set({ loading: false, error: String(e) })
+    }
+  },
+  select: async (id) => {
+    set({ selectedId: id, selected: id ? (get().items.find((c) => c.id === id) ?? null) : null })
+    if (!id) return
+    try {
+      const full = await api.getConversation(id)
+      if (get().selectedId === id) set({ selected: full })
+    } catch {
+      // keep the list version
+    }
+  },
+  search: async (q) => {
+    set({ searchQuery: q })
+    if (!q.trim()) {
+      await get().load()
+      return
+    }
+    set({ loading: true })
+    try {
+      const res = await api.searchConversations(q)
+      set({ items: res.items, loading: false })
+    } catch (e) {
+      set({ loading: false, error: String(e) })
+    }
+  },
+  toggleStar: async (id) => {
+    const conv = get().items.find((c) => c.id === id)
+    if (!conv) return
+    const starred = !conv.starred
+    set({ items: get().items.map((c) => (c.id === id ? { ...c, starred } : c)) })
+    try {
+      await api.setConversationStarred(id, starred)
+    } catch {
+      set({ items: get().items.map((c) => (c.id === id ? { ...c, starred: !starred } : c)) })
+    }
+  },
+  remove: async (id) => {
+    set({
+      items: get().items.filter((c) => c.id !== id),
+      selectedId: get().selectedId === id ? null : get().selectedId,
+      selected: get().selectedId === id ? null : get().selected
+    })
+    try {
+      await api.deleteConversation(id)
+    } catch {
+      await get().load()
+    }
+  },
+  rename: async (id, title) => {
+    set({
+      items: get().items.map((c) => (c.id === id ? { ...c, structured: { ...c.structured, title } } : c)),
+      selected:
+        get().selected?.id === id
+          ? { ...get().selected!, structured: { ...get().selected!.structured, title } }
+          : get().selected
+    })
+    await api.setConversationTitle(id, title)
+  }
+}))
+
+// ---- Live recording (the Mac app's AudioSourceManager + TranscriptionService loop) ----
+
+export type RecordingStatus = 'idle' | 'connecting' | 'recording' | 'stopping'
+
+interface LiveStore {
+  status: RecordingStatus
+  segments: TranscriptSegment[]
+  level: number
+  systemAudio: boolean
+  statusDetail: string | null
+  setSystemAudio: (v: boolean) => void
+  start: () => Promise<void>
+  stop: () => Promise<void>
+}
+
+let capture: PcmCapture | null = null
+let unsubEvents: (() => void) | null = null
+
+export const useLive = create<LiveStore>((set, get) => ({
+  status: 'idle',
+  segments: [],
+  level: 0,
+  systemAudio: true,
+  statusDetail: null,
+  setSystemAudio: (v) => set({ systemAudio: v }),
+  start: async () => {
+    if (get().status !== 'idle') return
+    set({ status: 'connecting', segments: [], statusDetail: null })
+
+    unsubEvents?.()
+    unsubEvents = window.omi.transcribe.onEvent('conversation', (event) => {
+      if (event.type === 'segments') {
+        const existing = get().segments
+        const merged = [...existing]
+        for (const seg of event.segments) {
+          const idx = seg.id ? merged.findIndex((s) => s.id === seg.id) : -1
+          if (idx >= 0) merged[idx] = seg
+          else merged.push(seg)
+        }
+        set({ segments: merged })
+      } else if (event.type === 'status') {
+        if (event.status === 'connected') set({ status: 'recording' })
+        else if (event.status === 'error') set({ statusDetail: event.detail ?? 'connection error' })
+        else if (event.status === 'closed' && get().status === 'recording') {
+          set({ statusDetail: 'connection closed' })
+        }
+      }
+    })
+
+    const ok = await window.omi.transcribe.start('conversation')
+    if (!ok) {
+      set({ status: 'idle', statusDetail: 'Sign in to start recording' })
+      return
+    }
+
+    capture = new PcmCapture()
+    try {
+      await capture.start({
+        systemAudio: get().systemAudio,
+        onFrame: (frame) => window.omi.transcribe.sendAudio('conversation', frame),
+        onLevel: (rms) => set({ level: rms })
+      })
+    } catch (e) {
+      window.omi.transcribe.stop('conversation')
+      set({ status: 'idle', statusDetail: `Microphone unavailable: ${e}` })
+      return
+    }
+  },
+  stop: async () => {
+    if (get().status === 'idle') return
+    set({ status: 'stopping' })
+    capture?.stop()
+    capture = null
+    window.omi.transcribe.stop('conversation')
+    unsubEvents?.()
+    unsubEvents = null
+    try {
+      await api.forceProcessConversation()
+    } catch {
+      // backend will time the conversation out on its own
+    }
+    set({ status: 'idle', level: 0 })
+    await useConversations.getState().load()
+  }
+}))
