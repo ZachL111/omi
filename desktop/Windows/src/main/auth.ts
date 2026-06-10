@@ -72,6 +72,11 @@ export function restoreAuth(): void {
 }
 
 export function getAuthState(): AuthState {
+  // Dev-only: OMI_FAKE_AUTH=1 renders the signed-in UI without a real login.
+  // Backend calls still 401 (no token), so pages show empty/error states.
+  if (!stored && process.env.OMI_FAKE_AUTH === '1') {
+    return { signedIn: true, uid: 'dev-preview', email: 'preview@omi.me', name: 'Preview' }
+  }
   if (!stored) return { signedIn: false }
   return { signedIn: true, uid: stored.uid, email: stored.email, name: stored.name }
 }

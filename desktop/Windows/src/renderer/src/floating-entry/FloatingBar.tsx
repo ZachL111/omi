@@ -17,8 +17,14 @@ const SIZES: Record<BarState, { width: number; height: number }> = {
   conversation: { width: 430, height: 440 }
 }
 
+function initialState(): BarState {
+  // Dev affordance: floating.html?state=bar|input|conversation forces a start state.
+  const forced = new URLSearchParams(location.search).get('state') as BarState | null
+  return forced && ['pill', 'bar', 'input', 'conversation'].includes(forced) ? forced : 'pill'
+}
+
 export function FloatingBar() {
-  const [state, setState] = useState<BarState>('pill')
+  const [state, setState] = useState<BarState>(initialState)
   const stateRef = useRef(state)
   stateRef.current = state
   const [input, setInput] = useState('')
@@ -36,6 +42,12 @@ export function FloatingBar() {
 
   useEffect(() => {
     initAuth()
+    // Sync the OS window to a forced initial state (dev affordance).
+    if (state !== 'pill') {
+      const size = SIZES[state]
+      window.omi.floating.setSize(size.width, size.height)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {

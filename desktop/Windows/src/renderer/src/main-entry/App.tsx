@@ -36,6 +36,10 @@ export function App() {
   useEffect(() => {
     initAuth()
     void loadSettings()
+    if (import.meta.env.DEV) {
+      // Dev affordance for screenshot tooling.
+      ;(window as unknown as { __omiPreviewNavigate?: (p: Page) => void }).__omiPreviewNavigate = setPage
+    }
     return window.omi.nav.onNavigate((p) => setPage(p as Page))
   }, [])
 
