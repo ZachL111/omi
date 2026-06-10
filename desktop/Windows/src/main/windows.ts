@@ -54,7 +54,8 @@ export function createMainWindow(): BrowserWindow {
     mainWindow = null
   })
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    // Only ever hand http(s) to the OS — never file://, ms-settings:, etc.
+    if (/^https?:\/\//i.test(url)) shell.openExternal(url)
     return { action: 'deny' }
   })
   loadRenderer(mainWindow, 'index')
@@ -72,13 +73,21 @@ export const FLOATING_SIZES = {
 export function createFloatingBar(): BrowserWindow {
   if (floatingBar && !floatingBar.isDestroyed()) return floatingBar
 
-  const display = screen.getPrimaryDisplay()
-  const wa = display.workArea
-  const savedPos = settings.get().floatingBarPosition
-
   const w = FLOATING_SIZES.bar.width
-  const x = savedPos?.x ?? Math.round(wa.x + (wa.width - w) / 2)
-  const y = savedPos?.y ?? wa.y + 8
+  const h = FLOATING_SIZES.bar.height
+  // Resolve the saved position against whichever display currently contains it,
+  // then clamp — otherwise a position saved on a now-disconnected monitor would
+  // place the bar off-screen and invisible.
+  const savedPos = settings.get().floatingBarPosition
+  const anchor = savedPos
+    ? screen.getDisplayNearestPoint({ x: savedPos.x, y: savedPos.y }).workArea
+    : screen.getPrimaryDisplay().workArea
+  const x = savedPos
+    ? Math.max(anchor.x, Math.min(savedPos.x, anchor.x + anchor.width - w))
+    : Math.round(anchor.x + (anchor.width - w) / 2)
+  const y = savedPos
+    ? Math.max(anchor.y, Math.min(savedPos.y, anchor.y + anchor.height - h))
+    : anchor.y + 8
 
   floatingBar = new BrowserWindow({
     width: w,
