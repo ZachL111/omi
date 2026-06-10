@@ -1,0 +1,90 @@
+import { app, session } from 'electron'
+import { join } from 'path'
+import { PROTOCOL_SCHEME } from './env'
+import { restoreAuth, handleAuthCallback } from './auth'
+import { registerIpc } from './ipc'
+import { createMainWindow, createFloatingBar, getMainWindow } from './windows'
+import { createTray, rebuildTrayMenu } from './tray'
+import { registerHotkeys, watchHotkeySettings, unregisterAll } from './shortcuts'
+import { installLoopbackAudioHandler } from './capture'
+import { startRewindEngine } from './rewind/capturer'
+import { ocrService } from './rewind/ocr'
+import { settings } from './settings'
+
+// App lifecycle, mirroring OmiApp.swift: single instance, protocol-scheme auth
+// callback, tray-resident (closing the main window does not quit).
+
+// Dev affordance: OMI_DEBUG_PORT=9333 exposes CDP for UI automation/screenshots.
+if (process.env.OMI_DEBUG_PORT) {
+  app.commandLine.appendSwitch('remote-debugging-port', process.env.OMI_DEBUG_PORT)
+}
+
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+} else {
+  if (process.defaultApp && process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(PROTOCOL_SCHEME, process.execPath, [join(process.argv[1])])
+  } else {
+    app.setAsDefaultProtocolClient(PROTOCOL_SCHEME)
+  }
+
+  app.on('second-instance', (_e, argv) => {
+    const url = argv.find((a) => a.startsWith(`${PROTOCOL_SCHEME}://`))
+    if (url) {
+      void handleAuthCallback(url)
+      return
+    }
+    const win = getMainWindow() ?? createMainWindow()
+    if (win.isMinimized()) win.restore()
+    win.show()
+    win.focus()
+  })
+
+  // macOS-style delivery; harmless on Windows, keeps parity if this ever runs elsewhere.
+  app.on('open-url', (_e, url) => {
+    if (url.startsWith(`${PROTOCOL_SCHEME}://`)) void handleAuthCallback(url)
+  })
+
+  app.whenReady().then(() => {
+    restoreAuth()
+    registerIpc()
+
+    session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+      callback(['media', 'display-capture', 'notifications', 'clipboard-read'].includes(permission))
+    })
+    installLoopbackAudioHandler()
+
+    createTray()
+    createMainWindow()
+    createFloatingBar()
+    registerHotkeys()
+    watchHotkeySettings()
+    startRewindEngine()
+    settings.on('changed', (next, prev) => {
+      rebuildTrayMenu()
+      if (next.launchAtLogin !== prev.launchAtLogin) {
+        app.setLoginItemSettings({ openAtLogin: next.launchAtLogin })
+      }
+      if (next.floatingBarVisible !== prev.floatingBarVisible) {
+        const bar = createFloatingBar()
+        if (next.floatingBarVisible) bar.showInactive()
+        else bar.hide()
+      }
+    })
+
+    const launchUrl = process.argv.find((a) => a.startsWith(`${PROTOCOL_SCHEME}://`))
+    if (launchUrl) void handleAuthCallback(launchUrl)
+  })
+
+  // Tray-resident app: keep running when all windows close (Mac app keeps the
+  // floating bar + menu bar item alive the same way).
+  app.on('window-all-closed', () => {})
+
+  app.on('activate', () => createMainWindow())
+
+  app.on('will-quit', () => {
+    unregisterAll()
+    ocrService.dispose()
+  })
+}
