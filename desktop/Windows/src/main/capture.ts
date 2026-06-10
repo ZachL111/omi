@@ -27,17 +27,34 @@ export async function captureScreenshot(): Promise<ScreenshotResult | null> {
   }
 }
 
+// Defense-in-depth: getDisplayMedia auto-resolves to screen + loopback audio
+// without a picker (needed for seamless meeting capture), so we only honor a
+// request the app itself armed within the last few seconds. A compromised
+// renderer calling getDisplayMedia out of band gets denied → can't silently
+// record the screen/system audio.
+let captureArmedUntil = 0
+const ARM_WINDOW_MS = 5000
+
 export function registerCaptureIpc(): void {
   ipcMain.handle('capture:screenshot', () => captureScreenshot())
+  ipcMain.on('capture:arm-loopback', () => {
+    captureArmedUntil = Date.now() + ARM_WINDOW_MS
+  })
 }
 
-/** getDisplayMedia({audio:true}) from any renderer resolves to primary screen + system loopback audio. */
 export function installLoopbackAudioHandler(): void {
   session.defaultSession.setDisplayMediaRequestHandler(
     (_request, callback) => {
-      desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
-        callback({ video: sources[0], audio: 'loopback' })
-      })
+      if (Date.now() > captureArmedUntil) {
+        // Not an app-initiated capture — deny.
+        callback({})
+        return
+      }
+      captureArmedUntil = 0
+      desktopCapturer.getSources({ types: ['screen'] }).then(
+        (sources) => callback(sources[0] ? { video: sources[0], audio: 'loopback' } : {}),
+        () => callback({})
+      )
     },
     { useSystemPicker: false }
   )

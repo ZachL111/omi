@@ -84,7 +84,9 @@ const api = {
     }
   },
   capture: {
-    screenshot: (): Promise<ScreenshotResult | null> => ipcRenderer.invoke('capture:screenshot')
+    screenshot: (): Promise<ScreenshotResult | null> => ipcRenderer.invoke('capture:screenshot'),
+    /** Arm an app-initiated display-media capture; must be called right before getDisplayMedia. */
+    armLoopback: (): void => ipcRenderer.send('capture:arm-loopback')
   },
   rewind: {
     list: (day: string | null, limit?: number, offset?: number): Promise<RewindFrame[]> =>

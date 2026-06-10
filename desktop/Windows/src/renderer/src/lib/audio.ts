@@ -28,7 +28,10 @@ export class PcmCapture {
 
     if (opts.systemAudio) {
       try {
-        // Main process resolves this to primary screen + 'loopback' audio.
+        // Arm the main-process handler so this (app-initiated) request is honored;
+        // out-of-band getDisplayMedia calls are denied. Resolves to primary
+        // screen + 'loopback' audio.
+        window.omi.capture.armLoopback()
         this.displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
         for (const track of this.displayStream.getVideoTracks()) track.stop()
         if (this.displayStream.getAudioTracks().length > 0) {
