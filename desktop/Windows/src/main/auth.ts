@@ -48,7 +48,10 @@ function persist(): void {
   if (safeStorage.isEncryptionAvailable()) {
     writeFileSync(authFile(), safeStorage.encryptString(plain))
   } else {
-    writeFileSync(authFile(), Buffer.from(plain, 'utf8'))
+    // DPAPI is effectively always available on Windows 10+; this path is a rare
+    // fallback. Tag the blob so restore knows it's not encrypted, and warn.
+    console.warn('auth: OS encryption unavailable — storing tokens unencrypted')
+    writeFileSync(authFile(), Buffer.concat([Buffer.from('PLAIN:', 'utf8'), Buffer.from(plain, 'utf8')]))
   }
 }
 
@@ -56,14 +59,12 @@ export function restoreAuth(): void {
   try {
     const raw = readFileSync(authFile())
     let plain: string
-    if (safeStorage.isEncryptionAvailable()) {
-      try {
-        plain = safeStorage.decryptString(raw)
-      } catch {
-        plain = raw.toString('utf8')
-      }
+    if (raw.subarray(0, 6).toString('utf8') === 'PLAIN:') {
+      plain = raw.subarray(6).toString('utf8') // unencrypted fallback blob
+    } else if (safeStorage.isEncryptionAvailable()) {
+      plain = safeStorage.decryptString(raw)
     } else {
-      plain = raw.toString('utf8')
+      plain = raw.toString('utf8') // legacy untagged plaintext
     }
     stored = JSON.parse(plain)
   } catch {

@@ -32,8 +32,9 @@ async function py<T>(method: string, url: string, body?: unknown): Promise<T> {
 }
 
 export const api = {
-  // Conversations
-  listConversations: (limit = 50, offset = 0, statuses = 'completed') =>
+  // Conversations (processing,completed matches the Mac app + backend default, so a
+  // just-finished recording shows up while it's still being post-processed)
+  listConversations: (limit = 50, offset = 0, statuses = 'processing,completed') =>
     py<ServerConversation[]>(
       'GET',
       `v1/conversations?limit=${limit}&offset=${offset}&statuses=${statuses}&include_discarded=false`

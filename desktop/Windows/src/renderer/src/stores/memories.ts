@@ -40,8 +40,13 @@ export const useMemories = create<MemoriesStore>((set, get) => ({
     await get().load()
   },
   edit: async (id, content) => {
-    set({ items: get().items.map((m) => (m.id === id ? { ...m, content } : m)) })
-    await api.editMemory(id, content)
+    const prev = get().items
+    set({ items: prev.map((m) => (m.id === id ? { ...m, content } : m)) })
+    try {
+      await api.editMemory(id, content)
+    } catch {
+      set({ items: prev }) // roll back on failure, matching remove()
+    }
   },
   remove: async (id) => {
     set({ items: get().items.filter((m) => m.id !== id) })

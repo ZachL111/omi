@@ -126,12 +126,16 @@ export const useLive = create<LiveStore>((set, get) => ({
     unsubEvents?.()
     unsubEvents = window.omi.transcribe.onEvent('conversation', (event) => {
       if (event.type === 'segments') {
-        const existing = get().segments
-        const merged = [...existing]
+        const merged = [...get().segments]
+        const indexById = new Map(merged.map((s, i) => [s.id, i]).filter(([id]) => id !== undefined) as [string, number][])
         for (const seg of event.segments) {
-          const idx = seg.id ? merged.findIndex((s) => s.id === seg.id) : -1
-          if (idx >= 0) merged[idx] = seg
-          else merged.push(seg)
+          const idx = seg.id !== undefined ? indexById.get(seg.id) : undefined
+          if (idx !== undefined) {
+            merged[idx] = seg
+          } else {
+            if (seg.id !== undefined) indexById.set(seg.id, merged.length)
+            merged.push(seg)
+          }
         }
         set({ segments: merged })
       } else if (event.type === 'status') {

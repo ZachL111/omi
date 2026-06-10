@@ -41,8 +41,10 @@ export function insertFrame(ts: number, day: string, path: string, bytes: number
 
 export function setFrameOcr(id: number, text: string): void {
   const d = getDb()
-  d.prepare('UPDATE frames SET ocr = ? WHERE id = ?').run(text, id)
-  d.prepare('INSERT INTO frames_fts(rowid, ocr) VALUES (?, ?)').run(id, text)
+  // Async OCR can resolve after the frame was pruned; the UPDATE then affects 0
+  // rows, so only index FTS when the frame still exists (avoids orphan FTS rows).
+  const changed = d.prepare('UPDATE frames SET ocr = ? WHERE id = ?').run(text, id).changes
+  if (changed > 0) d.prepare('INSERT INTO frames_fts(rowid, ocr) VALUES (?, ?)').run(id, text)
 }
 
 export function listFrames(day: string | null, limit: number, offset: number): RewindFrame[] {
