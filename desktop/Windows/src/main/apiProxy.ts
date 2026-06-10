@@ -7,10 +7,39 @@ import type { ApiRequest, ApiResponse } from '../shared/types'
 // All HTTP goes through the main process (no CORS, Node fetch), mirroring APIClient.swift:
 // Bearer auth, platform header, BYOK headers, one forced refresh + retry on 401.
 
+// Security: the renderer only ever supplies a relative path + a `base` selector.
+// We always build the final URL from the trusted, settings-configured base so a
+// compromised renderer can't redirect the Firebase Bearer token / BYOK keys to a
+// foreign host. Absolute URLs are only honored if their origin matches one of the
+// configured backends.
+function allowedOrigins(): Set<string> {
+  const s = settings.get()
+  const origins = new Set<string>()
+  for (const url of [pythonBaseURL(s.pythonApiUrl), rustBaseURL(s.rustApiUrl)]) {
+    try {
+      origins.add(new URL(url).origin)
+    } catch {
+      // ignore malformed override
+    }
+  }
+  return origins
+}
+
 function resolveUrl(req: ApiRequest): string {
-  if (/^https?:\/\//i.test(req.url)) return req.url
   const s = settings.get()
   const base = req.base === 'rust' ? rustBaseURL(s.rustApiUrl) : pythonBaseURL(s.pythonApiUrl)
+  if (/^https?:\/\//i.test(req.url)) {
+    let origin: string
+    try {
+      origin = new URL(req.url).origin
+    } catch {
+      throw new Error('apiProxy: malformed absolute URL rejected')
+    }
+    if (!allowedOrigins().has(origin)) {
+      throw new Error(`apiProxy: refusing to send credentials to non-backend host ${origin}`)
+    }
+    return req.url
+  }
   return base + req.url.replace(/^\//, '')
 }
 
