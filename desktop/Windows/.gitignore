@@ -5,3 +5,6 @@ dist/
 *.log
 .env
 .env.local
+# scratch screenshot output (tracked copies live in docs/screenshots/)
+shots/
+shots-*/
