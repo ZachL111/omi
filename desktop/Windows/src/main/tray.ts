@@ -1,17 +1,11 @@
 import { Tray, Menu, nativeImage, app, dialog } from 'electron'
-import { join } from 'path'
 import { createMainWindow, toggleFloatingBar, getFloatingBar, getMainWindow } from './windows'
 import { settings } from './settings'
+import { resourcePath } from './resources'
 
 // Mirrors the NSStatusBar menu in OmiApp.swift:setupMenuBar().
 
 let tray: Tray | null = null
-
-function resourcePath(name: string): string {
-  return app.isPackaged
-    ? join(process.resourcesPath, 'resources', name)
-    : join(app.getAppPath(), 'resources', name)
-}
 
 export function rebuildTrayMenu(): void {
   if (!tray) return

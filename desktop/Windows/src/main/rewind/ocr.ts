@@ -1,7 +1,6 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
-import { app } from 'electron'
-import { join } from 'path'
 import { createInterface } from 'readline'
+import { resourcePath } from '../resources'
 
 // Windows counterpart of Apple Vision OCR: a persistent Windows PowerShell 5.1
 // sidecar running the built-in Windows.Media.Ocr engine (resources/ocr-worker.ps1).
@@ -23,9 +22,7 @@ class OcrService {
   }
 
   private scriptPath(): string {
-    return app.isPackaged
-      ? join(process.resourcesPath, 'resources', 'ocr-worker.ps1')
-      : join(app.getAppPath(), 'resources', 'ocr-worker.ps1')
+    return resourcePath('ocr-worker.ps1')
   }
 
   private ensureProcess(): void {
@@ -39,15 +36,15 @@ class OcrService {
     const rl = createInterface({ input: proc.stdout })
     rl.on('line', (line) => this.handleLine(line))
     proc.stderr.on('data', () => {})
-    proc.on('exit', (code) => {
+    proc.on('exit', () => {
       this.proc = null
       this.ready = false
-      if (this.inFlight) {
-        this.inFlight.resolve(null)
-        this.inFlight = null
-      }
-      if (code !== 0 && this.queue.length === 0) return
-      // restart lazily on next job
+      // Fail the in-flight job; the queue is restarted lazily on the next
+      // recognize() call (which respawns the sidecar). Resolve any jobs that
+      // are already queued so their promises never hang on a hard crash.
+      this.inFlight?.resolve(null)
+      this.inFlight = null
+      for (const j of this.queue.splice(0)) j.resolve(null)
     })
   }
 

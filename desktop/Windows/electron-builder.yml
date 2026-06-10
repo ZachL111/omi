@@ -5,10 +5,16 @@ directories:
   output: dist
 files:
   - out/**
-  - resources/**
   - package.json
+# Runtime resources the MAIN process reads from disk must be real files (not in
+# asar). extraResources copies them to process.resourcesPath; resources.ts reads
+# them from there. (Renderer assets are bundled into out/ by Vite separately.)
+extraResources:
+  - from: resources/ocr-worker.ps1
+    to: ocr-worker.ps1
+  - from: resources/tray_icon.png
+    to: tray_icon.png
 asarUnpack:
-  - resources/**
   - "**/*.node"
 win:
   icon: resources/icon.png
