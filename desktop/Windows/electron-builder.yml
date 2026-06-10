@@ -1,0 +1,32 @@
+appId: com.omi.computer-windows
+productName: Omi
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - out/**
+  - resources/**
+  - package.json
+asarUnpack:
+  - resources/**
+  - "**/*.node"
+win:
+  icon: resources/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+nsis:
+  oneClick: true
+  perMachine: false
+  deleteAppDataOnUninstall: false
+  shortcutName: Omi
+portable:
+  artifactName: Omi-${version}-portable.exe
+protocols:
+  - name: Omi Computer
+    schemes: [omi-computer]
+electronDownload:
+  cache: .electron-cache
+npmRebuild: true
