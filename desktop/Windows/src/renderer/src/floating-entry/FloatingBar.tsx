@@ -294,7 +294,16 @@ export function FloatingBar() {
       <div style={{ padding: 2, height: '100vh' }}>
         <div style={{ ...shellStyle(), flexDirection: 'column', alignItems: 'stretch', padding: '14px 16px', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 9, height: 9, borderRadius: 5, background: voiceStatus === 'live' ? 'var(--success)' : voiceStatus === 'error' ? 'var(--error)' : 'var(--warning)', animation: voiceStatus === 'live' ? 'pulse 1.4s ease-in-out infinite' : 'none' }} />
+            <span
+              style={{
+                width: 9,
+                height: 9,
+                borderRadius: 5,
+                background: voiceStatus === 'live' ? 'var(--success)' : voiceStatus === 'error' ? 'var(--error)' : 'var(--warning)',
+                boxShadow: voiceStatus === 'live' ? '0 0 8px var(--success)' : 'none',
+                animation: voiceStatus === 'live' ? 'pulse 1s ease-in-out infinite' : 'none'
+              }}
+            />
             <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', flex: 1 }}>
               {voiceStatus === 'live' ? 'Listening…' : voiceStatus === 'error' ? 'Voice unavailable' : 'Connecting…'}
             </span>
