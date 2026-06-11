@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../../api/client'
-import type { Goal } from '../../api/types'
+import type { Goal, ScoreResponse } from '../../api/types'
 import { CategoryChip } from '../../components/ui'
+import { ScoreGauge } from '../../components/ScoreGauge'
 import { greeting, timeAgo } from '../../lib/format'
 import { useAuth } from '../../stores/auth'
 import { useConversations } from '../../stores/conversations'
@@ -15,12 +16,15 @@ export function DashboardPage({ onNavigate }: { onNavigate: (p: Page) => void })
   const conversations = useConversations()
   const memories = useMemories()
   const [goals, setGoals] = useState<Goal[]>([])
+  const [scores, setScores] = useState<ScoreResponse | null>(null)
+  const [scoreTab, setScoreTab] = useState<'daily' | 'weekly' | 'overall'>('daily')
 
   useEffect(() => {
     void tasks.load()
     void conversations.load()
     void memories.load()
     api.listGoals().then(setGoals).catch(() => {})
+    api.getScores().then(setScores).catch(() => {})
   }, [])
 
   const today = new Date().toDateString()
@@ -36,6 +40,28 @@ export function DashboardPage({ onNavigate }: { onNavigate: (p: Page) => void })
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+        {/* Daily score */}
+        <div className="card" style={{ padding: '16px 18px', minHeight: 170 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>Score</span>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {(['daily', 'weekly', 'overall'] as const).map((t) => (
+                <button
+                  key={t}
+                  className={`chip ${scoreTab === t ? 'active' : ''}`}
+                  style={{ fontSize: 11, padding: '2px 9px' }}
+                  onClick={() => setScoreTab(t)}
+                >
+                  {t === 'daily' ? 'Today' : t === 'weekly' ? 'Week' : 'All'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8 }}>
+            <ScoreGauge data={scores?.[scoreTab]} size={170} />
+          </div>
+        </div>
+
         {/* Today's Tasks */}
         <DashCard title="Today's Tasks" action="View all" onAction={() => onNavigate('tasks')}>
           {todayTasks.length === 0 ? (

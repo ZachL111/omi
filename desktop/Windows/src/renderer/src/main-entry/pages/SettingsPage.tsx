@@ -4,16 +4,33 @@ import { formatBytes } from '../../lib/format'
 import { useAuth } from '../../stores/auth'
 import { useSettings } from '../../stores/settings'
 
-type Section = 'general' | 'rewind' | 'proactive' | 'transcription' | 'account' | 'advanced' | 'about'
+type Section =
+  | 'general'
+  | 'rewind'
+  | 'proactive'
+  | 'focus'
+  | 'voice'
+  | 'transcription'
+  | 'account'
+  | 'advanced'
+  | 'about'
 
 const SECTIONS: { key: Section; label: string }[] = [
   { key: 'general', label: 'General' },
   { key: 'rewind', label: 'Rewind' },
   { key: 'proactive', label: 'Proactive' },
+  { key: 'focus', label: 'Focus' },
+  { key: 'voice', label: 'Voice' },
   { key: 'transcription', label: 'Transcription' },
   { key: 'account', label: 'Account' },
   { key: 'advanced', label: 'Advanced' },
   { key: 'about', label: 'About' }
+]
+
+const VOICES = ['marin', 'alloy', 'echo', 'shimmer', 'cedar']
+const MODELS = [
+  { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (default)' },
+  { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (faster)' }
 ]
 
 const LANGUAGES = ['en', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'hi', 'ru', 'uk', 'zh', 'ja', 'ko', 'ar']
@@ -26,6 +43,7 @@ export function SettingsPage() {
   const [version, setVersion] = useState('')
   const [rewindStats, setRewindStats] = useState<{ frames: number; bytes: number } | null>(null)
   const [capturingHotkey, setCapturingHotkey] = useState(false)
+  const [byokMsg, setByokMsg] = useState<string | null>(null)
 
   useEffect(() => {
     void window.omi.system.version().then(setVersion)
@@ -191,6 +209,71 @@ export function SettingsPage() {
           </SectionCard>
         )}
 
+        {section === 'focus' && (
+          <SectionCard title="Focus Monitoring">
+            <SettingRow label="Enable focus monitoring" description="Detect focused vs distracted screen activity">
+              <Toggle
+                on={settings.focusEnabled}
+                onChange={(v) => void update({ focusEnabled: v, rewindEnabled: v ? true : settings.rewindEnabled })}
+              />
+            </SettingRow>
+            <SettingRow label="Screen-edge glow" description="Flash a green/red glow on focus changes">
+              <Toggle on={settings.focusGlow} onChange={(v) => void update({ focusGlow: v })} />
+            </SettingRow>
+            <SettingRow label="Check interval">
+              <select
+                value={settings.focusAnalysisDelayMs}
+                onChange={(e) => void update({ focusAnalysisDelayMs: parseInt(e.target.value, 10) })}
+              >
+                <option value={45000}>Every 45 seconds</option>
+                <option value={60000}>Every minute (default)</option>
+                <option value={120000}>Every 2 minutes</option>
+              </select>
+            </SettingRow>
+            <SettingRow label="Distraction cooldown" description="Don't re-nudge for this long after a distraction glow">
+              <select
+                value={settings.focusCooldownMs}
+                onChange={(e) => void update({ focusCooldownMs: parseInt(e.target.value, 10) })}
+              >
+                <option value={300000}>5 minutes</option>
+                <option value={600000}>10 minutes (default)</option>
+                <option value={1200000}>20 minutes</option>
+              </select>
+            </SettingRow>
+          </SectionCard>
+        )}
+
+        {section === 'voice' && (
+          <>
+            <SectionCard title="Realtime Voice">
+              <SettingRow label="Provider" description="Used for live voice conversations from the floating bar">
+                <select
+                  value={settings.realtimeProvider}
+                  onChange={(e) => void update({ realtimeProvider: e.target.value as 'auto' | 'gemini' | 'openai' })}
+                >
+                  <option value="auto">Auto</option>
+                  <option value="gemini">Gemini Flash Live</option>
+                  <option value="openai">OpenAI Realtime</option>
+                </select>
+              </SettingRow>
+            </SectionCard>
+            <SectionCard title="Spoken Replies (TTS)">
+              <SettingRow label="Speak assistant replies" description="Read answers aloud in the floating bar">
+                <Toggle on={settings.ttsEnabled} onChange={(v) => void update({ ttsEnabled: v })} />
+              </SettingRow>
+              <SettingRow label="Voice">
+                <select value={settings.ttsVoice} onChange={(e) => void update({ ttsVoice: e.target.value })}>
+                  {VOICES.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </SettingRow>
+            </SectionCard>
+          </>
+        )}
+
         {section === 'transcription' && (
           <SectionCard title="Live Transcription">
             <SettingRow label="Language">
@@ -204,6 +287,21 @@ export function SettingsPage() {
                   </option>
                 ))}
               </select>
+            </SettingRow>
+            <SettingRow label="Custom vocabulary" description="Comma-separated names/terms to bias transcription">
+              <input
+                placeholder="Omi, Nik, Sakhalin…"
+                defaultValue={settings.customVocabulary.join(', ')}
+                onBlur={(e) =>
+                  void update({
+                    customVocabulary: e.target.value
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean)
+                  })
+                }
+                style={{ width: 240 }}
+              />
             </SettingRow>
             <SettingRow
               label="System audio"
@@ -260,6 +358,56 @@ export function SettingsPage() {
                   />
                 </SettingRow>
               ))}
+              <SettingRow
+                label="BYOK free plan"
+                description="Enroll your 4 keys to bypass the subscription — you pay the providers directly"
+              >
+                {settings.byokActive ? (
+                  <button
+                    className="btn-secondary"
+                    style={{ fontSize: 12.5 }}
+                    onClick={async () => {
+                      await window.omi.byok.deactivate()
+                      void useSettings.getState().load()
+                    }}
+                  >
+                    Active — deactivate
+                  </button>
+                ) : (
+                  <button
+                    className="btn-primary"
+                    style={{ fontSize: 12.5 }}
+                    onClick={async () => {
+                      setByokMsg('Activating…')
+                      const r = await window.omi.byok.activate()
+                      if (r.ok) {
+                        setByokMsg('Activated — chat is now free (charged to your keys)')
+                        void useSettings.getState().load()
+                      } else if (r.missing?.length) {
+                        setByokMsg(`Missing keys: ${r.missing.join(', ')}`)
+                      } else {
+                        setByokMsg(r.error || 'Activation failed')
+                      }
+                    }}
+                  >
+                    Activate
+                  </button>
+                )}
+              </SettingRow>
+              {byokMsg && (
+                <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--text-tertiary)' }}>{byokMsg}</div>
+              )}
+            </SectionCard>
+            <SectionCard title="AI Model">
+              <SettingRow label="Chat model" description="Used for the main chat and floating bar">
+                <select value={settings.aiModel} onChange={(e) => void update({ aiModel: e.target.value })}>
+                  {MODELS.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </SettingRow>
             </SectionCard>
             <SectionCard title="Backends">
               <SettingRow label="Python API URL" description="Default: https://api.omi.me/">
@@ -286,6 +434,20 @@ export function SettingsPage() {
           <SectionCard title="About omi">
             <SettingRow label="Version">
               <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{version} (Windows)</span>
+            </SettingRow>
+            <SettingRow label="Software updates" description="Installed builds update automatically from GitHub releases">
+              <button className="btn-secondary" style={{ fontSize: 12.5 }} onClick={() => void window.omi.updater.check()}>
+                Check for updates
+              </button>
+            </SettingRow>
+            <SettingRow label="Update channel">
+              <select
+                value={settings.updateChannel}
+                onChange={(e) => void update({ updateChannel: e.target.value as 'stable' | 'beta' })}
+              >
+                <option value="stable">Stable</option>
+                <option value="beta">Beta</option>
+              </select>
             </SettingRow>
             <SettingRow label="Website">
               <button className="btn-secondary" style={{ fontSize: 12.5 }} onClick={() => window.omi.system.openExternal('https://www.omi.me')}>

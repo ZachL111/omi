@@ -10,6 +10,9 @@ import { MemoriesPage } from './pages/MemoriesPage'
 import { TasksPage } from './pages/TasksPage'
 import { RewindPage } from './pages/RewindPage'
 import { InsightsPage } from './pages/InsightsPage'
+import { GoalsPage } from './pages/GoalsPage'
+import { FocusPage } from './pages/FocusPage'
+import { GraphPage } from './pages/GraphPage'
 import { AppsPage } from './pages/AppsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { HelpPage } from './pages/HelpPage'
@@ -22,8 +25,11 @@ export type Page =
   | 'chat'
   | 'memories'
   | 'tasks'
+  | 'goals'
   | 'rewind'
+  | 'focus'
   | 'insights'
+  | 'graph'
   | 'apps'
   | 'settings'
   | 'help'
@@ -34,8 +40,11 @@ const PAGE_ORDER: Page[] = [
   'chat',
   'memories',
   'tasks',
+  'goals',
   'rewind',
+  'focus',
   'insights',
+  'graph',
   'apps',
   'settings'
 ]
@@ -120,8 +129,11 @@ export function App() {
           {page === 'chat' && <ChatPage />}
           {page === 'memories' && <MemoriesPage />}
           {page === 'tasks' && <TasksPage />}
+          {page === 'goals' && <GoalsPage />}
           {page === 'rewind' && <RewindPage />}
+          {page === 'focus' && <FocusPage />}
           {page === 'insights' && <InsightsPage />}
+          {page === 'graph' && <GraphPage />}
           {page === 'apps' && <AppsPage />}
           {page === 'settings' && <SettingsPage />}
           {page === 'help' && <HelpPage />}

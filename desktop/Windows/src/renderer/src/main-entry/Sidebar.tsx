@@ -5,6 +5,9 @@ import {
   IconApps,
   IconConversations,
   IconDashboard,
+  IconFocus,
+  IconGoals,
+  IconGraph,
   IconHelp,
   IconInsights,
   IconMemories,
@@ -29,8 +32,11 @@ const NAV: { page: Page; label: string; icon: React.FC<{ size?: number }> }[] = 
   { page: 'chat', label: 'Chat', icon: IconConversations },
   { page: 'memories', label: 'Memories', icon: IconMemories },
   { page: 'tasks', label: 'Tasks', icon: IconTasks },
+  { page: 'goals', label: 'Goals', icon: IconGoals },
   { page: 'rewind', label: 'Rewind', icon: IconRewind },
+  { page: 'focus', label: 'Focus', icon: IconFocus },
   { page: 'insights', label: 'Insights', icon: IconInsights },
+  { page: 'graph', label: 'Graph', icon: IconGraph },
   { page: 'apps', label: 'Apps', icon: IconApps }
 ]
 
