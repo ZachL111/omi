@@ -26,19 +26,28 @@ import type { Page } from './App'
 // order (Dashboard, Conversations, Memories, Tasks, Rewind, Apps), audio-level
 // bars on Conversations while recording, pulsing dot on Rewind while capturing.
 
-const NAV: { page: Page; label: string; icon: React.FC<{ size?: number }> }[] = [
+type NavItem = { page: Page; label: string; icon: React.FC<{ size?: number }> }
+
+// Primary nav matches SidebarView.swift mainItems exactly (order + set).
+const PRIMARY_NAV: NavItem[] = [
   { page: 'dashboard', label: 'Dashboard', icon: IconDashboard },
   { page: 'conversations', label: 'Conversations', icon: IconConversations },
   { page: 'chat', label: 'Chat', icon: IconConversations },
   { page: 'memories', label: 'Memories', icon: IconMemories },
   { page: 'tasks', label: 'Tasks', icon: IconTasks },
-  { page: 'goals', label: 'Goals', icon: IconGoals },
   { page: 'rewind', label: 'Rewind', icon: IconRewind },
-  { page: 'focus', label: 'Focus', icon: IconFocus },
-  { page: 'insights', label: 'Insights', icon: IconInsights },
-  { page: 'graph', label: 'Graph', icon: IconGraph },
   { page: 'apps', label: 'Apps', icon: IconApps }
 ]
+
+// Secondary pages that exist on Mac but aren't in its primary sidebar list.
+const SECONDARY_NAV: NavItem[] = [
+  { page: 'goals', label: 'Goals', icon: IconGoals },
+  { page: 'focus', label: 'Focus', icon: IconFocus },
+  { page: 'insights', label: 'Insights', icon: IconInsights },
+  { page: 'graph', label: 'Graph', icon: IconGraph }
+]
+
+const NAV: NavItem[] = [...PRIMARY_NAV, ...SECONDARY_NAV]
 
 function AudioBars({ level }: { level: number }) {
   const heights = [0.5, 1, 0.7, 0.9].map((f) => Math.max(4, Math.min(14, 4 + level * 90 * f)))
@@ -140,7 +149,10 @@ export function Sidebar({ page, onNavigate }: { page: Page; onNavigate: (p: Page
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {NAV.map(({ page: p, label, icon: Icon }) => {
           const selected = page === p
+          const firstSecondary = !collapsed && p === SECONDARY_NAV[0].page
           return (
+            <React.Fragment key={p}>
+            {firstSecondary && <div style={{ height: 1, background: 'rgba(37,37,37,0.6)', margin: '8px 8px' }} />}
             <button
               key={p}
               onClick={() => onNavigate(p)}
@@ -176,7 +188,7 @@ export function Sidebar({ page, onNavigate }: { page: Page; onNavigate: (p: Page
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    background: 'var(--error)',
+                    background: 'var(--purple-primary)',
                     animation: 'pulse 1.6s ease-in-out infinite'
                   }}
                 />
@@ -201,6 +213,7 @@ export function Sidebar({ page, onNavigate }: { page: Page; onNavigate: (p: Page
                 </span>
               )}
             </button>
+            </React.Fragment>
           )
         })}
       </div>
@@ -288,7 +301,7 @@ export function Sidebar({ page, onNavigate }: { page: Page; onNavigate: (p: Page
               width: 30,
               height: 30,
               borderRadius: 15,
-              background: 'var(--user-bubble)',
+              background: 'var(--purple-primary)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -324,7 +337,7 @@ export function Sidebar({ page, onNavigate }: { page: Page; onNavigate: (p: Page
               width: 220,
               padding: 6,
               zIndex: 60,
-              background: 'var(--bg-raised)'
+              background: 'var(--bg-primary)'
             }}
           >
             {[
