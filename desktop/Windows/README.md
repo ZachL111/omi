@@ -75,18 +75,25 @@ Everything below is wired to the same endpoints as the Mac app.
 | Google / Apple sign-in | ✅ | same backend OAuth + Firebase custom token |
 | Floating control bar + states | ✅ | NSPanel → frameless always-on-top BrowserWindow |
 | Global Ask-Omi hotkey | ✅ | Carbon hotkey → Electron `globalShortcut` |
-| Streaming chat | ✅ | same `/v2/chat/completions` SSE |
+| Streaming chat + sessions + rating | ✅ | `/v2/chat/completions` SSE; multi-session sidebar, history, thumbs up/down |
 | Screenshot context | ✅ | ScreenCaptureKit → `desktopCapturer` |
-| Push-to-talk transcription | ✅ | same `/v2/voice-message/transcribe-stream` |
-| Live conversation capture | ✅ | CoreAudio+ScreenCaptureKit tap → mic + WASAPI loopback |
-| Conversations / Memories / Tasks / Dashboard | ✅ | same REST endpoints |
-| Rewind (capture + OCR + search) | ✅ | ScreenCaptureKit+Vision → `desktopCapturer`+Windows.Media.Ocr; GRDB FTS5 → better-sqlite3 FTS5 |
-| Proactive assistant (screen → memories/tasks/insights) | ✅ | ProactiveAssistants subsystem ported as a single engine: recent screen OCR → LLM extraction → `/v3/memories` + `/v1/action-items` + local insights, surfaced in the floating bar |
+| Push-to-talk + realtime voice | ✅ | transcribe-stream PTT + RealtimeOmni relay (Gemini/OpenAI) live voice |
+| Live conversation capture + live notes | ✅ | mic + WASAPI loopback → `/v4/listen`; short AI notes during recording |
+| Conversations (star, rename, share, speaker naming) | ✅ | same REST; public-link share; click-to-name speakers |
+| Memories / Tasks (staged, due, indent) / Goals / Dashboard score | ✅ | same REST endpoints; semicircle score gauge; AI-staged tasks |
+| Rewind (capture + OCR + search) | ✅ | `desktopCapturer` + Windows.Media.Ocr; GRDB FTS5 → better-sqlite3 FTS5 |
+| Proactive assistant (memories/tasks/insights) | ✅ | screen OCR → LLM extraction → `/v3/memories` + `/v1/action-items` + insights in the floating bar |
+| Focus assistant + screen-edge glow | ✅ | focused/distracted detection; green/red glow overlay (GlowBorderView params) |
+| Knowledge / Memory graph | ✅ | `/v1/knowledge-graph`; 2D force-directed (Mac is 3D SceneKit) |
 | Menu-bar / tray item | ✅ | NSStatusBar → Electron Tray |
-| Design system (colors, radii, layout) | ✅ | tokens ported 1:1 from `Sources/Theme` |
-| Auto-update | ⏳ | Sparkle not ported; "Check for updates" is a stub (ship via GitHub releases) |
-| BLE pendant | ❌ | out of scope (CoreBluetooth device stack) |
-| Agent VMs / Live Notes / Knowledge graph | ❌ | out of scope for this challenge |
+| Auto-update | ✅ | Sparkle → electron-updater (GitHub releases feed) |
+| BYOK free plan | ✅ | enroll 4 keys via `/v1/users/me/byok-active` to bypass the paywall |
+| TTS spoken replies | ✅ | `/v1/tts/synthesize`, voice picker |
+| File indexing / X import | ◑ | basic folder-scan → seed memory; X import links to omi.me |
+| Design system (colors, radii, layout) | ✅ | tokens ported 1:1 from `Sources/Theme`; sidebar order matches Mac |
+| Conversation folders / merge | ◑ | share done; folders + merge deferred |
+| Onboarding flow | ◑ | sign-in screen covers first run; multi-step onboarding deferred |
+| BLE pendant / Agent VMs | ❌ | out of scope (CoreBluetooth / cloud VM provisioning) |
 
 ## Architecture
 
