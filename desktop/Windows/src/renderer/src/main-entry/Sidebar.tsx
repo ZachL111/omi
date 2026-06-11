@@ -105,7 +105,7 @@ export function Sidebar({ page, onNavigate }: { page: Page; onNavigate: (p: Page
     <div
       style={{
         width: collapsed ? 64 : 260,
-        transition: 'width 0.2s ease',
+        transition: 'width 0.32s cubic-bezier(0.2, 0.8, 0.2, 1)',
         display: 'flex',
         flexDirection: 'column',
         padding: '12px 10px 12px',
