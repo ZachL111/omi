@@ -7,7 +7,15 @@ import type { TaskActionItem } from '../../api/types'
 export function TasksPage() {
   const store = useTasks()
   const [draft, setDraft] = useState('')
+  const [draftDue, setDraftDue] = useState('')
   const [showCompleted, setShowCompleted] = useState(false)
+
+  const addDraft = () => {
+    if (!draft.trim()) return
+    void store.add(draft, draftDue ? new Date(draftDue).toISOString() : undefined)
+    setDraft('')
+    setDraftDue('')
+  }
 
   useEffect(() => {
     void store.load()
@@ -44,32 +52,53 @@ export function TasksPage() {
         {store.loading && <Spinner size={15} />}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <input
           value={draft}
           placeholder="Add a task…"
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && draft.trim()) {
-              void store.add(draft)
-              setDraft('')
-            }
+            if (e.key === 'Enter') addDraft()
           }}
           style={{ flex: 1 }}
         />
-        <button
-          className="btn-primary"
-          disabled={!draft.trim()}
-          onClick={() => {
-            if (draft.trim()) {
-              void store.add(draft)
-              setDraft('')
-            }
-          }}
-        >
+        <input
+          type="date"
+          value={draftDue}
+          onChange={(e) => setDraftDue(e.target.value)}
+          title="Due date"
+          style={{ width: 140, colorScheme: 'dark' }}
+        />
+        <button className="btn-primary" disabled={!draft.trim()} onClick={addDraft}>
           <IconPlus size={14} /> Add
         </button>
       </div>
+
+      {/* Staged (AI-proposed) tasks */}
+      {store.staged.length > 0 && (
+        <div className="section" style={{ padding: 12, marginBottom: 18, borderColor: 'rgba(139,92,246,0.35)' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--purple-secondary)', marginBottom: 8 }}>
+            Omi suggests · {store.staged.length}
+          </div>
+          {store.staged.map((s) => (
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+              <span style={{ flex: 1, fontSize: 13, color: 'var(--text-secondary)' }}>{s.description}</span>
+              <button
+                onClick={() => void store.acceptStaged(s.id)}
+                style={{ fontSize: 12, color: 'var(--success)', padding: '3px 9px', background: 'rgba(16,185,129,0.12)', borderRadius: 8 }}
+              >
+                Add
+              </button>
+              <button
+                onClick={() => void store.dismissStaged(s.id)}
+                style={{ fontSize: 12, color: 'var(--text-quaternary)', padding: '3px 9px' }}
+              >
+                Dismiss
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {store.incomplete.length === 0 && !store.loading && (
         <EmptyState title="All clear" subtitle="New tasks from conversations and Ask Omi land here." />
@@ -124,14 +153,27 @@ function TaskGroup({
         {tasks.map((t, i) => (
           <div
             key={t.id}
+            tabIndex={completed ? undefined : 0}
+            onKeyDown={(e) => {
+              if (completed) return
+              if (e.key === 'Tab') {
+                e.preventDefault()
+                void store.setIndent(t.id, (t.indent_level ?? 0) + (e.shiftKey ? -1 : 1))
+              }
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 11,
               padding: '11px 14px',
-              borderBottom: i < tasks.length - 1 ? '1px solid var(--border)' : 'none'
+              paddingLeft: 14 + (t.indent_level ?? 0) * 26,
+              borderBottom: i < tasks.length - 1 ? '1px solid var(--border)' : 'none',
+              outline: 'none'
             }}
           >
+            {(t.indent_level ?? 0) > 0 && (
+              <span style={{ width: 2, alignSelf: 'stretch', background: 'var(--border-strong)', borderRadius: 1, marginRight: 2 }} />
+            )}
             <button
               onClick={() => void store.toggle(t)}
               title={completed ? 'Reopen' : 'Complete'}
