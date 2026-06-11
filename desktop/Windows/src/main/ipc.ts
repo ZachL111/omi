@@ -15,12 +15,14 @@ import { getProactiveStatus, runProactiveNow } from './proactive/engine'
 import { activateByok, deactivateByok } from './byok'
 import { checkForUpdates } from './updater'
 import { getFocusStatus, listSessions as listFocusSessions, todaySummary } from './focus/engine'
+import { registerFileIndexIpc } from './fileIndex'
 
 export function registerIpc(): void {
   registerApiIpc()
   registerTranscriptionIpc()
   registerRealtimeIpc()
   registerCaptureIpc()
+  registerFileIndexIpc()
 
   ipcMain.handle('auth:get-state', () => getAuthState())
   ipcMain.on('auth:sign-in', (_e, provider: 'google' | 'apple') => startSignIn(provider))

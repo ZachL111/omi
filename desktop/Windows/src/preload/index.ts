@@ -142,6 +142,9 @@ const api = {
     activate: (): Promise<{ ok: boolean; error?: string; missing?: string[] }> => ipcRenderer.invoke('byok:activate'),
     deactivate: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('byok:deactivate')
   },
+  files: {
+    index: (): Promise<{ ok: boolean; summary?: string; error?: string }> => ipcRenderer.invoke('files:index')
+  },
   updater: {
     check: (): Promise<{ status: string; version?: string; percent?: number; error?: string }> =>
       ipcRenderer.invoke('updater:check'),

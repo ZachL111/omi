@@ -8,6 +8,7 @@ import { api } from '../../api/client'
 export function AppsPage() {
   const [mcpKey, setMcpKey] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [indexing, setIndexing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const createKey = async () => {
@@ -42,6 +43,23 @@ export function AppsPage() {
       desc: '10k+ builders sharing apps, prompts and integrations.',
       action: 'Join',
       onClick: () => window.omi.system.openExternal('https://discord.gg/omi')
+    },
+    {
+      title: 'Index my files',
+      desc: 'Scan Downloads/Documents/Desktop to give Omi context on what you work on (a summary memory, stays private).',
+      action: indexing ? 'Indexing…' : 'Scan files',
+      onClick: async () => {
+        setIndexing(true)
+        const r = await window.omi.files.index()
+        setIndexing(false)
+        window.alert(r.ok ? 'Indexed — added a summary memory about your files.' : `Could not index: ${r.error}`)
+      }
+    },
+    {
+      title: 'Import from X (Twitter)',
+      desc: 'Bring your posts and likes into Omi as memories.',
+      action: 'Connect',
+      onClick: () => window.omi.system.openExternal('https://www.omi.me/apps')
     },
     {
       title: 'App Marketplace',
