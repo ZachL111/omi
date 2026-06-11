@@ -18,6 +18,17 @@ export interface AppSettings {
   proactiveEnabled: boolean
   proactiveIntervalMs: number
   proactiveNotifications: boolean
+  focusEnabled: boolean
+  focusGlow: boolean
+  focusAnalysisDelayMs: number
+  focusCooldownMs: number
+  realtimeProvider: 'auto' | 'gemini' | 'openai'
+  ttsEnabled: boolean
+  ttsVoice: string
+  customVocabulary: string[]
+  aiModel: string
+  updateChannel: 'stable' | 'beta'
+  byokActive: boolean
   byokAnthropic: string
   byokOpenAI: string
   byokGemini: string
@@ -49,6 +60,24 @@ export interface ProactiveNotification {
   title: string
   body: string
   category: string
+}
+
+export interface FocusSession {
+  id: number
+  ts: number
+  status: 'focused' | 'distracted'
+  appOrSite: string
+  description: string
+  message: string | null
+  durationSeconds: number
+}
+
+export interface FocusStatus {
+  enabled: boolean
+  monitoring: boolean
+  current: 'focused' | 'distracted' | null
+  currentApp: string | null
+  lastError: string | null
 }
 
 export interface ApiRequest {

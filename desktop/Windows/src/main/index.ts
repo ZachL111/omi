@@ -10,6 +10,9 @@ import { installLoopbackAudioHandler } from './capture'
 import { startRewindEngine } from './rewind/capturer'
 import { ocrService } from './rewind/ocr'
 import { startProactiveEngine } from './proactive/engine'
+import { startFocusEngine } from './focus/engine'
+import { disposeGlow } from './focus/glow'
+import { scheduleStartupCheck } from './updater'
 import { settings } from './settings'
 
 // App lifecycle, mirroring OmiApp.swift: single instance, protocol-scheme auth
@@ -65,6 +68,8 @@ if (!gotLock) {
     watchHotkeySettings()
     startRewindEngine()
     startProactiveEngine()
+    startFocusEngine()
+    scheduleStartupCheck()
     settings.on('changed', (next, prev) => {
       rebuildTrayMenu()
       if (next.launchAtLogin !== prev.launchAtLogin) {
@@ -90,5 +95,6 @@ if (!gotLock) {
   app.on('will-quit', () => {
     unregisterAll()
     ocrService.dispose()
+    disposeGlow()
   })
 }

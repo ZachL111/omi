@@ -2,6 +2,7 @@ import { Tray, Menu, nativeImage, app, dialog } from 'electron'
 import { createMainWindow, toggleFloatingBar, getFloatingBar, getMainWindow } from './windows'
 import { settings } from './settings'
 import { resourcePath } from './resources'
+import { checkForUpdates } from './updater'
 
 // Mirrors the NSStatusBar menu in OmiApp.swift:setupMenuBar().
 
@@ -54,14 +55,7 @@ export function rebuildTrayMenu(): void {
     { type: 'separator' },
     {
       label: 'Check for Updates',
-      click: async () => {
-        const win = getMainWindow()
-        await dialog.showMessageBox(win ?? createMainWindow(), {
-          type: 'info',
-          message: `Omi for Windows ${app.getVersion()}`,
-          detail: 'You are on the latest build. Updates ship via GitHub releases for now.'
-        })
-      }
+      click: () => void checkForUpdates(true)
     },
     {
       label: 'About omi',

@@ -125,6 +125,34 @@ const api = {
       return () => ipcRenderer.removeListener('proactive:notification', handler)
     }
   },
+  byok: {
+    activate: (): Promise<{ ok: boolean; error?: string; missing?: string[] }> => ipcRenderer.invoke('byok:activate'),
+    deactivate: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('byok:deactivate')
+  },
+  updater: {
+    check: (): Promise<{ status: string; version?: string; percent?: number; error?: string }> =>
+      ipcRenderer.invoke('updater:check'),
+    onState: (cb: (s: { status: string; version?: string; percent?: number }) => void): (() => void) => {
+      const handler = (_e: unknown, s: { status: string; version?: string; percent?: number }) => cb(s)
+      ipcRenderer.on('updater:state', handler)
+      return () => ipcRenderer.removeListener('updater:state', handler)
+    }
+  },
+  focus: {
+    status: (): Promise<unknown> => ipcRenderer.invoke('focus:status'),
+    sessions: (): Promise<unknown> => ipcRenderer.invoke('focus:sessions'),
+    summary: (): Promise<unknown> => ipcRenderer.invoke('focus:summary'),
+    onStatus: (cb: (s: unknown) => void): (() => void) => {
+      const handler = (_e: unknown, s: unknown) => cb(s)
+      ipcRenderer.on('focus:status', handler)
+      return () => ipcRenderer.removeListener('focus:status', handler)
+    },
+    onGlow: (cb: (g: { status: 'focused' | 'distracted' }) => void): (() => void) => {
+      const handler = (_e: unknown, g: { status: 'focused' | 'distracted' }) => cb(g)
+      ipcRenderer.on('glow:show', handler)
+      return () => ipcRenderer.removeListener('glow:show', handler)
+    }
+  },
   system: {
     version: (): Promise<string> => ipcRenderer.invoke('app:version'),
     openExternal: (url: string): void => ipcRenderer.send('shell:open-external', url)

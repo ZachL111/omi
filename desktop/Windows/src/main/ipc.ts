@@ -11,6 +11,9 @@ import { registerTranscriptionIpc } from './transcription'
 import { registerCaptureIpc } from './capture'
 import { listInsights, markRead, markAllRead, deleteInsight } from './proactive/store'
 import { getProactiveStatus, runProactiveNow } from './proactive/engine'
+import { activateByok, deactivateByok } from './byok'
+import { checkForUpdates } from './updater'
+import { getFocusStatus, listSessions as listFocusSessions, todaySummary } from './focus/engine'
 
 export function registerIpc(): void {
   registerApiIpc()
@@ -80,6 +83,15 @@ export function registerIpc(): void {
   ipcMain.handle('proactive:mark-read', (_e, id: number) => markRead(id))
   ipcMain.handle('proactive:mark-all-read', () => markAllRead())
   ipcMain.handle('proactive:delete', (_e, id: number) => deleteInsight(id))
+
+  ipcMain.handle('focus:status', () => getFocusStatus())
+  ipcMain.handle('focus:sessions', () => listFocusSessions(200))
+  ipcMain.handle('focus:summary', () => todaySummary())
+
+  ipcMain.handle('byok:activate', () => activateByok())
+  ipcMain.handle('byok:deactivate', () => deactivateByok())
+
+  ipcMain.handle('updater:check', () => checkForUpdates(true))
 
   ipcMain.handle('app:version', () => app.getVersion())
   ipcMain.on('shell:open-external', (_e, url: string) => {
