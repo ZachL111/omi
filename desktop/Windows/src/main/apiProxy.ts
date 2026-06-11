@@ -76,8 +76,21 @@ export async function apiRequest(req: ApiRequest): Promise<ApiResponse> {
   return { status: res.status, body: await res.text() }
 }
 
+/** Binary variant for endpoints that return audio (TTS). Returns base64 body. */
+export async function apiRequestBinary(req: ApiRequest): Promise<{ status: number; base64: string; contentType: string }> {
+  let token = req.anonymous ? null : await getValidToken()
+  let res = await doFetch(req, token)
+  if (res.status === 401 && !req.anonymous) {
+    token = await forceRefreshToken()
+    if (token) res = await doFetch(req, token)
+  }
+  const buf = Buffer.from(await res.arrayBuffer())
+  return { status: res.status, base64: buf.toString('base64'), contentType: res.headers.get('content-type') || '' }
+}
+
 export function registerApiIpc(): void {
   ipcMain.handle('api:request', async (_e, req: ApiRequest) => apiRequest(req))
+  ipcMain.handle('api:request-binary', async (_e, req: ApiRequest) => apiRequestBinary(req))
 
   // Streaming (SSE) variant: emits api:stream:<id> events {type:'chunk'|'done'|'error'} to the caller.
   ipcMain.handle('api:stream', async (e, id: string, req: ApiRequest) => {

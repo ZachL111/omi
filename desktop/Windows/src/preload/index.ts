@@ -29,6 +29,8 @@ const api = {
   },
   api: {
     request: (req: ApiRequest): Promise<ApiResponse> => ipcRenderer.invoke('api:request', req),
+    requestBinary: (req: ApiRequest): Promise<{ status: number; base64: string; contentType: string }> =>
+      ipcRenderer.invoke('api:request-binary', req),
     stream: (
       req: ApiRequest,
       onChunk: (data: string) => void,

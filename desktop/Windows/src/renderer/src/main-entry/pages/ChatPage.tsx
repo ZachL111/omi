@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { IconCamera, IconSend } from '../../components/Icons'
+import { IconCamera, IconPlus, IconSend, IconStar, IconTrash } from '../../components/Icons'
 import { Markdown, Spinner } from '../../components/ui'
+import { timeAgo } from '../../lib/format'
 import { useAuth } from '../../stores/auth'
 import { useChat } from '../../stores/chat'
+import { useChatSessions } from '../../stores/chatSessions'
 
 const SUGGESTIONS = [
   'What should I do today?',
@@ -13,6 +15,7 @@ const SUGGESTIONS = [
 
 export function ChatPage() {
   const chat = useChat()
+  const sessions = useChatSessions()
   const auth = useAuth((s) => s.state)
   const [input, setInput] = useState('')
   const [pendingShot, setPendingShot] = useState<string | null>(null)
@@ -21,8 +24,18 @@ export function ChatPage() {
 
   useEffect(() => {
     chat.setUserName(auth?.name)
+    void sessions.load()
     void chat.loadHistory()
   }, [auth?.name])
+
+  // Switch the chat thread when the selected session changes.
+  useEffect(() => {
+    if (sessions.currentId && sessions.currentId !== chat.sessionId) {
+      void chat.setSession(sessions.currentId)
+    }
+  }, [sessions.currentId])
+
+  const visibleSessions = sessions.starredOnly ? sessions.sessions.filter((s) => s.starred) : sessions.sessions
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -52,22 +65,104 @@ export function ChatPage() {
     if (result) setPendingShot(result.dataUrl)
   }
 
+  const newChat = async () => {
+    const id = await sessions.create()
+    if (id) void chat.setSession(id)
+    else chat.clear()
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div
-        style={{
-          padding: '44px 24px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid var(--border)'
-        }}
-      >
-        <span style={{ fontSize: 19, fontWeight: 700 }}>Chat</span>
-        <button className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => chat.clear()}>
-          New chat
-        </button>
+    <div style={{ display: 'flex', height: '100%' }}>
+      {/* Sessions sidebar (ChatSessionsSidebar.swift) */}
+      <div style={{ width: 220, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div style={{ padding: '44px 12px 8px' }}>
+          <button className="btn-primary" style={{ width: '100%', fontSize: 12.5 }} onClick={() => void newChat()}>
+            <IconPlus size={13} /> New chat
+          </button>
+          <button
+            className={`chip ${sessions.starredOnly ? 'active' : ''}`}
+            style={{ marginTop: 8, width: '100%', justifyContent: 'center' }}
+            onClick={() => sessions.setStarredOnly(!sessions.starredOnly)}
+          >
+            <IconStar size={12} filled={sessions.starredOnly} /> Starred
+          </button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '4px 8px 10px' }}>
+          {visibleSessions.map((s) => {
+            const selected = sessions.currentId === s.id
+            return (
+              <div
+                key={s.id}
+                onClick={() => sessions.select(s.id)}
+                style={{
+                  padding: '8px 9px',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  background: selected ? 'var(--bg-tertiary)' : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginBottom: 2
+                }}
+                onMouseEnter={(e) => {
+                  if (!selected) e.currentTarget.style.background = 'rgba(37,37,37,0.6)'
+                }}
+                onMouseLeave={(e) => {
+                  if (!selected) e.currentTarget.style.background = 'transparent'
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.title || 'New Chat'}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void sessions.toggleStar(s.id)
+                  }}
+                  style={{ color: s.starred ? 'var(--warning)' : 'var(--text-quaternary)', padding: 1 }}
+                  title="Star"
+                >
+                  <IconStar size={12} filled={s.starred} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void sessions.remove(s.id)
+                  }}
+                  style={{ color: 'var(--text-quaternary)', padding: 1 }}
+                  title="Delete"
+                >
+                  <IconTrash size={12} />
+                </button>
+              </div>
+            )
+          })}
+          {visibleSessions.length === 0 && (
+            <div style={{ padding: 14, fontSize: 12, color: 'var(--text-quaternary)', textAlign: 'center' }}>
+              {sessions.starredOnly ? 'No starred chats' : 'No chats yet'}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Chat thread */}
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            padding: '44px 24px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid var(--border)'
+          }}
+        >
+          <span style={{ fontSize: 19, fontWeight: 700 }}>
+            {sessions.sessions.find((s) => s.id === sessions.currentId)?.title || 'Chat'}
+          </span>
+          <button className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => void newChat()}>
+            New chat
+          </button>
+        </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '22px 24px' }}>
         {chat.messages.length === 0 ? (
@@ -122,6 +217,24 @@ export function ChatPage() {
                           animation: 'pulse 1s ease-in-out infinite'
                         }}
                       />
+                    )}
+                    {!m.streaming && m.text && !m.error && (
+                      <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                        <button
+                          onClick={() => void chat.rate(m.id, 1)}
+                          title="Good response"
+                          style={{ fontSize: 12, color: m.rating === 1 ? 'var(--success)' : 'var(--text-quaternary)', padding: '2px 4px' }}
+                        >
+                          👍
+                        </button>
+                        <button
+                          onClick={() => void chat.rate(m.id, -1)}
+                          title="Bad response"
+                          style={{ fontSize: 12, color: m.rating === -1 ? 'var(--error)' : 'var(--text-quaternary)', padding: '2px 4px' }}
+                        >
+                          👎
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -204,6 +317,7 @@ export function ChatPage() {
             </button>
           )}
         </div>
+      </div>
       </div>
     </div>
   )

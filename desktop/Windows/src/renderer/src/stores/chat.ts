@@ -1,26 +1,52 @@
 import { create } from 'zustand'
 import { api } from '../api/client'
 import { buildSystemPrompt, streamChatCompletion, type ChatMessage } from '../api/chat'
+import { useSettings } from './settings'
+import { speak } from '../lib/tts'
 
 export interface UiChatMessage {
   id: string
+  serverId?: string
   role: 'user' | 'assistant'
   text: string
   imageDataUrl?: string
   streaming?: boolean
   error?: boolean
+  rating?: 1 | -1 | 0
 }
 
 interface ChatStore {
   messages: UiChatMessage[]
   streaming: boolean
   historyLoaded: boolean
+  sessionId: string | null
   userName?: string
   setUserName: (name?: string) => void
+  setSession: (sessionId: string | null) => Promise<void>
   loadHistory: () => Promise<void>
   send: (text: string, opts?: { imageDataUrl?: string; screenContext?: string }) => Promise<void>
+  rate: (uiId: string, value: 1 | -1) => Promise<void>
   stop: () => void
   clear: () => void
+}
+
+function currentModel(): string {
+  return useSettings.getState().settings?.aiModel || 'claude-sonnet-4-6'
+}
+
+async function persistMessage(sessionId: string | null, text: string, sender: 'human' | 'ai'): Promise<string | undefined> {
+  try {
+    const res = await window.omi.api.request({
+      method: 'POST',
+      url: 'v2/desktop/messages',
+      base: 'python',
+      body: JSON.stringify({ text, sender, session_id: sessionId ?? undefined })
+    })
+    if (res.status >= 200 && res.status < 300) return (JSON.parse(res.body) as { id?: string }).id
+  } catch {
+    // best-effort persistence
+  }
+  return undefined
 }
 
 let activeCancel: (() => void) | null = null
@@ -58,24 +84,40 @@ export const useChat = create<ChatStore>((set, get) => ({
   messages: [],
   streaming: false,
   historyLoaded: false,
+  sessionId: null,
   userName: undefined,
   setUserName: (name) => set({ userName: name }),
+  setSession: async (sessionId) => {
+    set({ sessionId, messages: [], historyLoaded: false })
+    await get().loadHistory()
+  },
   loadHistory: async () => {
-    if (get().historyLoaded) return
     try {
-      const server = await api.listMessages(60)
-      const mapped: UiChatMessage[] = server
+      const sessionId = get().sessionId
+      const server = sessionId ? await api.listSessionMessages(sessionId, 100) : await api.listMessages(60)
+      const sorted = server
         .slice()
-        .reverse()
-        .map((m) => ({
-          id: m.id,
-          role: m.sender === 'ai' ? 'assistant' : 'user',
-          text: m.text
-        }))
-      // History endpoint returns newest-first in some deployments — normalize by created_at.
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      const mapped: UiChatMessage[] = sorted.map((m) => ({
+        id: m.id,
+        serverId: m.id,
+        role: m.sender === 'ai' ? 'assistant' : 'user',
+        text: m.text
+      }))
       set({ messages: mapped, historyLoaded: true })
     } catch {
       set({ historyLoaded: true })
+    }
+  },
+  rate: async (uiId, value) => {
+    const msg = get().messages.find((m) => m.id === uiId)
+    if (!msg?.serverId) return
+    const next = msg.rating === value ? 0 : value
+    set({ messages: get().messages.map((m) => (m.id === uiId ? { ...m, rating: next } : m)) })
+    try {
+      await api.rateMessage(msg.serverId, next === 0 ? null : next)
+    } catch {
+      // ignore
     }
   },
   send: async (text, opts) => {
@@ -83,20 +125,29 @@ export const useChat = create<ChatStore>((set, get) => ({
     if (!trimmed && !opts?.imageDataUrl) return
     if (get().streaming) return
 
+    const sessionId = get().sessionId
     const userMsg: UiChatMessage = { id: nextId(), role: 'user', text: trimmed, imageDataUrl: opts?.imageDataUrl }
     const assistantMsg: UiChatMessage = { id: nextId(), role: 'assistant', text: '', streaming: true }
     set({ messages: [...get().messages, userMsg, assistantMsg], streaming: true })
+    void persistMessage(sessionId, trimmed, 'human')
 
     const finish = (errorText?: string) => {
+      const finalText = errorText ?? get().messages.find((m) => m.id === assistantMsg.id)?.text ?? ''
       set({
         messages: get().messages.map((m) =>
-          m.id === assistantMsg.id
-            ? { ...m, streaming: false, error: !!errorText, text: errorText ? errorText : m.text }
-            : m
+          m.id === assistantMsg.id ? { ...m, streaming: false, error: !!errorText, text: finalText } : m
         ),
         streaming: false
       })
       activeCancel = null
+      if (!errorText && finalText) {
+        void persistMessage(sessionId, finalText, 'ai').then((serverId) => {
+          if (serverId) {
+            set({ messages: get().messages.map((m) => (m.id === assistantMsg.id ? { ...m, serverId } : m)) })
+          }
+        })
+        if (useSettings.getState().settings?.ttsEnabled) void speak(finalText)
+      }
     }
 
     const run = (withImage: boolean) => {
@@ -126,7 +177,8 @@ export const useChat = create<ChatStore>((set, get) => ({
           } else {
             finish(`Something went wrong (HTTP ${status}). ${body.slice(0, 200)}`)
           }
-        }
+        },
+        currentModel()
       )
       activeCancel = handle.cancel
     }
