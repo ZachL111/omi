@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { IconMic, IconSearch, IconStar, IconStop, IconTrash } from '../../components/Icons'
+import { IconExternal, IconMic, IconSearch, IconStar, IconStop, IconTrash } from '../../components/Icons'
 import { EmptyState, Spinner, Toggle } from '../../components/ui'
+import { api } from '../../api/client'
 import { clockTime, segmentClock, speakerColor, timeAgo } from '../../lib/format'
+import { speakerName, setSpeakerName } from '../../lib/speakers'
 import { useConversations, useLive } from '../../stores/conversations'
 
 export function ConversationsPage() {
@@ -224,6 +226,19 @@ function LiveDetail() {
       <div style={{ fontSize: 12.5, color: 'var(--text-quaternary)', marginBottom: 18 }}>
         Transcribing in real time — speakers are identified automatically
       </div>
+      {live.notes.length > 0 && (
+        <div className="section" style={{ padding: 14, marginBottom: 18 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--purple-secondary)', marginBottom: 8 }}>
+            Live notes
+          </div>
+          {live.notes.map((n, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, padding: '3px 0', fontSize: 13, color: 'var(--text-secondary)' }}>
+              <span style={{ color: 'var(--purple-secondary)' }}>•</span>
+              {n}
+            </div>
+          ))}
+        </div>
+      )}
       <TranscriptList segments={live.segments} />
       <div ref={endRef} />
     </div>
@@ -275,6 +290,22 @@ function ConversationDetail() {
             {c.structured?.category ? ` · ${c.structured.category}` : ''}
           </div>
         </div>
+        <button
+          onClick={async () => {
+            try {
+              await api.setConversationVisibility(c.id, 'public')
+              window.alert('Conversation is now shareable (public link enabled on omi.me).')
+            } catch {
+              window.alert('Could not update sharing.')
+            }
+          }}
+          title="Share (make public)"
+          style={{ color: 'var(--text-quaternary)', padding: 6 }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--purple-secondary)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-quaternary)')}
+        >
+          <IconExternal size={15} />
+        </button>
         <button
           onClick={() => void store.toggleStar(c.id)}
           title={c.starred ? 'Unstar' : 'Star'}
@@ -336,32 +367,56 @@ function TranscriptList({
 }: {
   segments: { id?: string; text: string; speaker?: string; speaker_id?: number; is_user?: boolean; start?: number }[]
 }) {
+  const [, force] = useState(0)
+  const renameSpeaker = (speakerId: number | undefined) => {
+    if (speakerId === undefined) return
+    const current = speakerName(speakerId) ?? ''
+    const name = window.prompt('Name this speaker', current)
+    if (name !== null) {
+      setSpeakerName(speakerId, name)
+      force((n) => n + 1)
+    }
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {segments.map((s, i) => (
-        <div
-          key={s.id ?? i}
-          style={{
-            alignSelf: s.is_user ? 'flex-end' : 'flex-start',
-            maxWidth: '78%',
-            background: speakerColor(s.speaker_id, s.is_user),
-            borderRadius: 'var(--radius-bubble)',
-            padding: '10px 14px'
-          }}
-        >
-          <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 3 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>
-              {s.is_user ? 'You' : s.speaker || `Speaker ${(s.speaker_id ?? 0) + 1}`}
-            </span>
-            {s.start !== undefined && (
-              <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.45)' }}>{segmentClock(s.start)}</span>
-            )}
+      {segments.map((s, i) => {
+        const named = speakerName(s.speaker_id)
+        const label = s.is_user ? 'You' : named || s.speaker || `Speaker ${(s.speaker_id ?? 0) + 1}`
+        return (
+          <div
+            key={s.id ?? i}
+            style={{
+              alignSelf: s.is_user ? 'flex-end' : 'flex-start',
+              maxWidth: '78%',
+              background: speakerColor(s.speaker_id, s.is_user),
+              borderRadius: 'var(--radius-bubble)',
+              padding: '10px 14px'
+            }}
+          >
+            <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 3 }}>
+              <span
+                onClick={() => !s.is_user && renameSpeaker(s.speaker_id)}
+                title={s.is_user ? undefined : 'Click to name this speaker'}
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: 'rgba(255,255,255,0.85)',
+                  cursor: s.is_user ? 'default' : 'pointer'
+                }}
+              >
+                {label}
+                {!s.is_user && !named && <span style={{ opacity: 0.5 }}> ✎</span>}
+              </span>
+              {s.start !== undefined && (
+                <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.45)' }}>{segmentClock(s.start)}</span>
+              )}
+            </div>
+            <div className="text-selectable" style={{ fontSize: 13.5, lineHeight: 1.5 }}>
+              {s.text}
+            </div>
           </div>
-          <div className="text-selectable" style={{ fontSize: 13.5, lineHeight: 1.5 }}>
-            {s.text}
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
