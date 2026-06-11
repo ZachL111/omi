@@ -28,6 +28,7 @@ export interface AppSettings {
   customVocabulary: string[]
   aiModel: string
   updateChannel: 'stable' | 'beta'
+  hasOnboarded: boolean
   byokActive: boolean
   byokAnthropic: string
   byokOpenAI: string

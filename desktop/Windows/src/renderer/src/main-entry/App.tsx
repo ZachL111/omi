@@ -3,6 +3,7 @@ import { useAuth } from '../stores/auth'
 import { useSettings } from '../stores/settings'
 import { Sidebar } from './Sidebar'
 import { SignInView } from './SignInView'
+import { Onboarding } from './Onboarding'
 import { DashboardPage } from './pages/DashboardPage'
 import { ConversationsPage } from './pages/ConversationsPage'
 import { ChatPage } from './pages/ChatPage'
@@ -102,6 +103,14 @@ export function App() {
     return (
       <Shell>
         <SignInView />
+      </Shell>
+    )
+  }
+
+  if (settings && !settings.hasOnboarded) {
+    return (
+      <Shell>
+        <Onboarding />
       </Shell>
     )
   }

@@ -26,6 +26,7 @@ const DEFAULTS: AppSettings = {
   customVocabulary: [],
   aiModel: 'claude-sonnet-4-6',
   updateChannel: 'stable',
+  hasOnboarded: false,
   byokActive: false,
   byokAnthropic: '',
   byokOpenAI: '',
