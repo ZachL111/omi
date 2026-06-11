@@ -13,10 +13,14 @@ can reasonably support.
 
 | | |
 |---|---|
-| Dashboard | ![dashboard](docs/screenshots/dashboard.png) |
+| Dashboard (score gauge + widgets) | ![dashboard](docs/screenshots/dashboard.png) |
 | Conversations + live recording | ![conversations](docs/screenshots/conversations.png) |
+| Goals | ![goals](docs/screenshots/goals.png) |
+| Focus | ![focus](docs/screenshots/focus.png) |
+| Memory graph | ![graph](docs/screenshots/graph.png) |
 | Memories | ![memories](docs/screenshots/memories.png) |
 | Rewind | ![rewind](docs/screenshots/rewind.png) |
+| Insights (proactive) | ![insights](docs/screenshots/insights.png) |
 | Settings | ![settings](docs/screenshots/settings.png) |
 | Sign-in | ![signin](docs/screenshots/signin.png) |
 
