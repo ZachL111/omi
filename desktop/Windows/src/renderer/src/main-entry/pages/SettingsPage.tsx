@@ -7,22 +7,28 @@ import { useSettings } from '../../stores/settings'
 type Section =
   | 'general'
   | 'rewind'
-  | 'proactive'
-  | 'focus'
-  | 'voice'
   | 'transcription'
+  | 'notifications'
+  | 'focus'
+  | 'proactive'
+  | 'voice'
+  | 'privacy'
   | 'account'
+  | 'plan'
   | 'advanced'
   | 'about'
 
 const SECTIONS: { key: Section; label: string }[] = [
   { key: 'general', label: 'General' },
   { key: 'rewind', label: 'Rewind' },
-  { key: 'proactive', label: 'Proactive' },
-  { key: 'focus', label: 'Focus' },
-  { key: 'voice', label: 'Voice' },
   { key: 'transcription', label: 'Transcription' },
+  { key: 'notifications', label: 'Notifications' },
+  { key: 'focus', label: 'Focus' },
+  { key: 'proactive', label: 'Proactive' },
+  { key: 'voice', label: 'Voice' },
+  { key: 'privacy', label: 'Privacy' },
   { key: 'account', label: 'Account' },
+  { key: 'plan', label: 'Plan & Usage' },
   { key: 'advanced', label: 'Advanced' },
   { key: 'about', label: 'About' }
 ]
@@ -103,7 +109,7 @@ export function SettingsPage() {
 
         {section === 'general' && (
           <>
-            <SectionCard title="Ask Omi">
+            <SectionCard title="Ask omi Floating Bar">
               <SettingRow label="Keyboard shortcut" description="Summons the floating bar from anywhere">
                 <button className="btn-secondary" style={{ fontSize: 12.5 }} onClick={() => setCapturingHotkey(true)}>
                   {capturingHotkey ? 'Press keys…' : settings.hotkey.replace(/Control/g, 'Ctrl')}
@@ -205,6 +211,58 @@ export function SettingsPage() {
               description="Screen text stays on this device; only short excerpts are sent to the model for analysis, same as the Mac app"
             >
               <span style={{ fontSize: 12, color: 'var(--text-quaternary)' }}>local-first</span>
+            </SettingRow>
+          </SectionCard>
+        )}
+
+        {section === 'notifications' && (
+          <SectionCard title="Notifications">
+            <SettingRow label="Proactive insight notifications" description="Surface nudges in the floating bar">
+              <Toggle on={settings.proactiveNotifications} onChange={(v) => void update({ proactiveNotifications: v })} />
+            </SettingRow>
+            <SettingRow label="Focus glow" description="Flash the screen-edge glow on focus changes">
+              <Toggle on={settings.focusGlow} onChange={(v) => void update({ focusGlow: v })} />
+            </SettingRow>
+          </SectionCard>
+        )}
+
+        {section === 'privacy' && (
+          <SectionCard title="Privacy">
+            <SettingRow
+              label="Screen capture stays local"
+              description="Rewind frames + OCR text are stored only on this device"
+            >
+              <span style={{ fontSize: 12.5, color: 'var(--success)' }}>on-device</span>
+            </SettingRow>
+            <SettingRow label="Data retention">
+              <select
+                value={settings.retentionDays}
+                onChange={(e) => void update({ retentionDays: parseInt(e.target.value, 10) })}
+              >
+                <option value={7}>7 days</option>
+                <option value={30}>30 days</option>
+                <option value={90}>90 days</option>
+                <option value={365}>1 year</option>
+              </select>
+            </SettingRow>
+            <SettingRow label="What we send" description="Only short text excerpts go to the model for analysis">
+              <span style={{ fontSize: 12.5, color: 'var(--text-quaternary)' }}>excerpts only</span>
+            </SettingRow>
+          </SectionCard>
+        )}
+
+        {section === 'plan' && (
+          <SectionCard title="Plan & Usage">
+            <SettingRow label="Current plan" description="Basic includes 1,200 transcription minutes/month">
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{settings.byokActive ? 'BYOK (unlimited)' : 'Basic'}</span>
+            </SettingRow>
+            <SettingRow label="Upgrade to Unlimited" description="$19/mo or $199/yr — more listening minutes">
+              <button className="btn-primary" style={{ fontSize: 12.5 }} onClick={() => window.omi.system.openExternal('https://www.omi.me')}>
+                Manage plan
+              </button>
+            </SettingRow>
+            <SettingRow label="Free chat path" description="Bring your own keys to use chat for free (Advanced → BYOK)">
+              <span style={{ fontSize: 12.5, color: 'var(--text-quaternary)' }}>see Advanced</span>
             </SettingRow>
           </SectionCard>
         )}

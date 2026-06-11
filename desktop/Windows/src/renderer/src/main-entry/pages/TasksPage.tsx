@@ -138,11 +138,9 @@ function TaskGroup({
       {title && (
         <div
           style={{
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 600,
-            textTransform: 'uppercase',
-            letterSpacing: 0.6,
-            color: accent || 'var(--text-quaternary)',
+            color: accent || 'var(--text-tertiary)',
             marginBottom: 7
           }}
         >

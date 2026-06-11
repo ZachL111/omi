@@ -80,12 +80,12 @@ function GoalRow({ goal }: { goal: Goal }) {
         style={{
           width: 36,
           height: 36,
-          borderRadius: 10,
-          background: 'var(--bg-tertiary)',
+          borderRadius: 12,
+          background: 'rgba(31, 31, 37, 0.9)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 18,
+          fontSize: 16,
           flexShrink: 0
         }}
       >
@@ -123,9 +123,9 @@ function GoalRow({ goal }: { goal: Goal }) {
               window.addEventListener('mousemove', move)
               window.addEventListener('mouseup', up)
             }}
-            style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.12)', cursor: 'pointer', position: 'relative' }}
+            style={{ height: dragPct === null ? 6 : 8, borderRadius: 3, background: 'rgba(255,255,255,0.12)', cursor: 'pointer', position: 'relative', transition: 'height 0.15s ease' }}
           >
-            <div style={{ width: `${shown}%`, height: '100%', borderRadius: 4, background: color, transition: dragPct === null ? 'width 0.2s ease' : 'none' }} />
+            <div style={{ width: `${shown}%`, height: '100%', borderRadius: 3, background: color, transition: dragPct === null ? 'width 0.2s ease' : 'none' }} />
           </div>
         )}
       </div>

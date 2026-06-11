@@ -50,7 +50,9 @@ const SECONDARY_NAV: NavItem[] = [
 const NAV: NavItem[] = [...PRIMARY_NAV, ...SECONDARY_NAV]
 
 function AudioBars({ level }: { level: number }) {
-  const heights = [0.5, 1, 0.7, 0.9].map((f) => Math.max(4, Math.min(14, 4 + level * 90 * f)))
+  // sqrt boost so quiet speech still moves the bars (matches SidebarAudioBar.swift)
+  const boosted = Math.sqrt(Math.max(0, level))
+  const heights = [0.5, 1, 0.7, 0.9].map((f) => Math.max(4, Math.min(14, 4 + boosted * 40 * f)))
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 14 }}>
       {heights.map((h, i) => (

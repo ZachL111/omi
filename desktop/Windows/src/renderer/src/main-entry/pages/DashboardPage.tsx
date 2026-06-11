@@ -41,9 +41,9 @@ export function DashboardPage({ onNavigate }: { onNavigate: (p: Page) => void })
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
         {/* Daily score */}
-        <div className="card" style={{ padding: '16px 18px', minHeight: 170 }}>
+        <div className="card" style={{ padding: '20px 22px', minHeight: 170 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 15, fontWeight: 600 }}>Score</span>
+            <span style={{ fontSize: 16, fontWeight: 600 }}>Daily Score</span>
             <div style={{ display: 'flex', gap: 5 }}>
               {(['daily', 'weekly', 'overall'] as const).map((t) => (
                 <button
@@ -204,9 +204,9 @@ function DashCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="card" style={{ padding: '16px 18px', minHeight: 170 }}>
+    <div className="card" style={{ padding: '20px 22px', minHeight: 170 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ fontSize: 15, fontWeight: 600 }}>{title}</span>
+        <span style={{ fontSize: 16, fontWeight: 600 }}>{title}</span>
         {action && (
           <button onClick={onAction} style={{ fontSize: 12, color: 'var(--purple-secondary)' }}>
             {action}

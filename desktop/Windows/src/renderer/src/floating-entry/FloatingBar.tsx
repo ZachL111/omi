@@ -15,7 +15,7 @@ const NOTIFICATION_SIZE = { width: 430, height: 112 }
 type BarState = 'pill' | 'bar' | 'input' | 'conversation' | 'voice'
 
 const SIZES: Record<BarState, { width: number; height: number }> = {
-  pill: { width: 56, height: 22 },
+  pill: { width: 48, height: 20 },
   bar: { width: 210, height: 50 },
   input: { width: 430, height: 96 },
   conversation: { width: 430, height: 440 },
@@ -235,10 +235,10 @@ export function FloatingBar() {
         <div
           onMouseEnter={onPillEnter}
           style={{
-            width: 44,
-            height: 13,
+            width: 40,
+            height: 12,
             marginTop: 4,
-            borderRadius: 6.5,
+            borderRadius: 6,
             background: 'rgba(18, 18, 22, 0.88)',
             border: '1px solid rgba(255, 255, 255, 0.14)',
             boxShadow: '0 2px 8px rgba(0,0,0,0.4)'

@@ -19,6 +19,7 @@ export function ChatPage() {
   const auth = useAuth((s) => s.state)
   const [input, setInput] = useState('')
   const [pendingShot, setPendingShot] = useState<string | null>(null)
+  const [hoveredSession, setHoveredSession] = useState<string | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
   const taRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -105,35 +106,41 @@ export function ChatPage() {
                   marginBottom: 2
                 }}
                 onMouseEnter={(e) => {
+                  setHoveredSession(s.id)
                   if (!selected) e.currentTarget.style.background = 'rgba(37,37,37,0.6)'
                 }}
                 onMouseLeave={(e) => {
+                  setHoveredSession((cur) => (cur === s.id ? null : cur))
                   if (!selected) e.currentTarget.style.background = 'transparent'
                 }}
               >
                 <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {s.title || 'New Chat'}
                 </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    void sessions.toggleStar(s.id)
-                  }}
-                  style={{ color: s.starred ? 'var(--warning)' : 'var(--text-quaternary)', padding: 1 }}
-                  title="Star"
-                >
-                  <IconStar size={12} filled={s.starred} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    void sessions.remove(s.id)
-                  }}
-                  style={{ color: 'var(--text-quaternary)', padding: 1 }}
-                  title="Delete"
-                >
-                  <IconTrash size={12} />
-                </button>
+                {(s.starred || hoveredSession === s.id) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void sessions.toggleStar(s.id)
+                    }}
+                    style={{ color: s.starred ? 'var(--warning)' : 'var(--text-quaternary)', padding: 1 }}
+                    title="Star"
+                  >
+                    <IconStar size={12} filled={s.starred} />
+                  </button>
+                )}
+                {hoveredSession === s.id && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void sessions.remove(s.id)
+                    }}
+                    style={{ color: 'var(--text-quaternary)', padding: 1 }}
+                    title="Delete"
+                  >
+                    <IconTrash size={12} />
+                  </button>
+                )}
               </div>
             )
           })}

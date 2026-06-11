@@ -81,7 +81,7 @@ export function MemoriesPage() {
           subtitle="Memories are extracted from conversations and your screen, or added manually."
         />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 720 }}>
           {items.map((m) => (
             <div key={m.id} className="card" style={{ padding: 14, position: 'relative' }}>
               <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
