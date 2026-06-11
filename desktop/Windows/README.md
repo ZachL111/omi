@@ -55,6 +55,10 @@ Everything below is wired to the same endpoints as the Mac app.
   dHash (≤5-bit Hamming = same screen), OCRs each frame with the built-in
   **Windows.Media.Ocr** engine, indexes the text in SQLite FTS5, and gives you a
   searchable timeline. Everything stays local.
+- **Proactive assistant** — when enabled, periodically reads recent screen OCR text
+  (the same on-device capture as Rewind), asks the LLM to extract durable memories,
+  action items, and at most one useful nudge; memories/tasks sync to your account,
+  and nudges appear on the **Insights** page and as a floating-bar notification card.
 - **Apps** — MCP key creation (`/v1/mcp/keys`) to connect Omi memories to Claude /
   ChatGPT, plus links to mobile, Discord, marketplace.
 - **Settings** — General (hotkey, floating bar, launch-at-login, font scale), Rewind
@@ -77,11 +81,12 @@ Everything below is wired to the same endpoints as the Mac app.
 | Live conversation capture | ✅ | CoreAudio+ScreenCaptureKit tap → mic + WASAPI loopback |
 | Conversations / Memories / Tasks / Dashboard | ✅ | same REST endpoints |
 | Rewind (capture + OCR + search) | ✅ | ScreenCaptureKit+Vision → `desktopCapturer`+Windows.Media.Ocr; GRDB FTS5 → better-sqlite3 FTS5 |
+| Proactive assistant (screen → memories/tasks/insights) | ✅ | ProactiveAssistants subsystem ported as a single engine: recent screen OCR → LLM extraction → `/v3/memories` + `/v1/action-items` + local insights, surfaced in the floating bar |
 | Menu-bar / tray item | ✅ | NSStatusBar → Electron Tray |
 | Design system (colors, radii, layout) | ✅ | tokens ported 1:1 from `Sources/Theme` |
 | Auto-update | ⏳ | Sparkle not ported; "Check for updates" is a stub (ship via GitHub releases) |
 | BLE pendant | ❌ | out of scope (CoreBluetooth device stack) |
-| Agent VMs / proactive assistants | ❌ | out of scope for this challenge |
+| Agent VMs / Live Notes / Knowledge graph | ❌ | out of scope for this challenge |
 
 ## Architecture
 
