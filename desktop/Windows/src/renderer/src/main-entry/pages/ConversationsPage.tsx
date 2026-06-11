@@ -5,16 +5,40 @@ import { api } from '../../api/client'
 import { clockTime, segmentClock, speakerColor, timeAgo } from '../../lib/format'
 import { speakerName, setSpeakerName } from '../../lib/speakers'
 import { useConversations, useLive } from '../../stores/conversations'
+import { useFolders } from '../../stores/folders'
 
 export function ConversationsPage() {
   const store = useConversations()
   const live = useLive()
+  const folders = useFolders()
   const [query, setQuery] = useState('')
+  const [mergeMode, setMergeMode] = useState(false)
+  const [mergeSel, setMergeSel] = useState<string[]>([])
   const searchTimer = useRef<number | null>(null)
 
   useEffect(() => {
     void store.load()
+    void folders.load()
   }, [])
+
+  const visibleItems = folders.activeFolderId
+    ? store.items.filter((c) => c.folder_id === folders.activeFolderId)
+    : store.items
+
+  const toggleMergeSel = (id: string) =>
+    setMergeSel((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+
+  const doMerge = async () => {
+    if (mergeSel.length < 2) return
+    try {
+      await api.mergeConversations(mergeSel)
+    } catch {
+      // ignore
+    }
+    setMergeMode(false)
+    setMergeSel([])
+    await store.load()
+  }
 
   const onSearch = (q: string) => {
     setQuery(q)
@@ -36,7 +60,7 @@ export function ConversationsPage() {
       >
         <div style={{ padding: '44px 14px 10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 19, fontWeight: 700 }}>Conversations</span>
+            <span style={{ fontSize: 18, fontWeight: 600 }}>Conversations</span>
             {store.loading && <Spinner size={14} />}
           </div>
 
@@ -108,16 +132,68 @@ export function ConversationsPage() {
           </div>
 
           <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 10, top: 8, color: 'var(--text-quaternary)' }}>
+            <span style={{ position: 'absolute', left: 12, top: 9, color: 'var(--text-quaternary)' }}>
               <IconSearch size={14} />
             </span>
             <input
               placeholder="Search conversations"
               value={query}
               onChange={(e) => onSearch(e.target.value)}
-              style={{ width: '100%', paddingLeft: 32 }}
+              style={{ width: '100%', paddingLeft: 34, borderRadius: 18, background: 'var(--bg-secondary)' }}
             />
           </div>
+
+          {/* Folders + merge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+            <button
+              className={`chip ${folders.activeFolderId === null ? 'active' : ''}`}
+              style={{ fontSize: 11.5, padding: '3px 10px' }}
+              onClick={() => folders.setActive(null)}
+            >
+              All
+            </button>
+            {folders.folders.map((f) => (
+              <button
+                key={f.id}
+                className={`chip ${folders.activeFolderId === f.id ? 'active' : ''}`}
+                style={{ fontSize: 11.5, padding: '3px 10px' }}
+                onClick={() => folders.setActive(f.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  if (window.confirm(`Delete folder "${f.name}"?`)) void folders.remove(f.id)
+                }}
+              >
+                {f.name}
+              </button>
+            ))}
+            <button
+              className="chip"
+              style={{ fontSize: 11.5, padding: '3px 9px' }}
+              title="New folder"
+              onClick={() => {
+                const n = window.prompt('New folder name')
+                if (n) void folders.create(n)
+              }}
+            >
+              +
+            </button>
+            <span style={{ flex: 1 }} />
+            <button
+              className={`chip ${mergeMode ? 'active' : ''}`}
+              style={{ fontSize: 11.5, padding: '3px 10px' }}
+              onClick={() => {
+                setMergeMode((v) => !v)
+                setMergeSel([])
+              }}
+            >
+              {mergeMode ? `Merge (${mergeSel.length})` : 'Merge'}
+            </button>
+          </div>
+          {mergeMode && mergeSel.length >= 2 && (
+            <button className="btn-primary" style={{ width: '100%', marginTop: 8, fontSize: 12.5 }} onClick={() => void doMerge()}>
+              Merge {mergeSel.length} conversations
+            </button>
+          )}
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 10px' }}>
@@ -141,12 +217,12 @@ export function ConversationsPage() {
               </div>
             </button>
           )}
-          {store.items.map((c) => {
-            const selected = store.selectedId === c.id
+          {visibleItems.map((c) => {
+            const selected = mergeMode ? mergeSel.includes(c.id) : store.selectedId === c.id
             return (
               <button
                 key={c.id}
-                onClick={() => void store.select(c.id)}
+                onClick={() => (mergeMode ? toggleMergeSel(c.id) : void store.select(c.id))}
                 style={{
                   display: 'block',
                   width: '100%',
@@ -163,6 +239,24 @@ export function ConversationsPage() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {mergeMode && (
+                    <span
+                      style={{
+                        width: 15,
+                        height: 15,
+                        borderRadius: 4,
+                        flexShrink: 0,
+                        border: selected ? 'none' : '1.5px solid var(--text-quaternary)',
+                        background: selected ? 'var(--purple-primary)' : 'transparent',
+                        color: '#fff',
+                        fontSize: 10,
+                        lineHeight: '15px',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {selected ? '✓' : ''}
+                    </span>
+                  )}
                   <span style={{ fontSize: 15 }}>{c.structured?.emoji || '💬'}</span>
                   <span
                     style={{
