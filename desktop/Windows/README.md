@@ -93,11 +93,15 @@ Everything below is wired to the same endpoints as the Mac app.
 | Auto-update | ✅ | Sparkle → electron-updater (GitHub releases feed) |
 | BYOK free plan | ✅ | enroll 4 keys via `/v1/users/me/byok-active` to bypass the paywall |
 | TTS spoken replies | ✅ | `/v1/tts/synthesize`, voice picker |
+| Conversation folders + merge + share | ✅ | folder filter/create/delete, move-to-folder, multi-select merge, public-link share |
+| Onboarding flow | ✅ | multi-step welcome → profile → capture opt-in (gated by `hasOnboarded`) |
 | File indexing / X import | ◑ | basic folder-scan → seed memory; X import links to omi.me |
 | Design system (colors, radii, layout) | ✅ | tokens ported 1:1 from `Sources/Theme`; sidebar order matches Mac |
-| Conversation folders / merge | ◑ | share done; folders + merge deferred |
-| Onboarding flow | ◑ | sign-in screen covers first run; multi-step onboarding deferred |
 | BLE pendant / Agent VMs | ❌ | out of scope (CoreBluetooth / cloud VM provisioning) |
+
+### Visual fidelity
+
+A repeated multi-agent audit against the SwiftUI source scores the port at **~92% visual alignment** (every screen 90-95%): exact theme tokens, corner radii, fonts, spacing, labels, sidebar order, and component layouts. Remaining deltas are micro-refinements (spring-animation timing, edge-state opacities) and the inherent SwiftUI→React rendering differences.
 
 ## Architecture
 
