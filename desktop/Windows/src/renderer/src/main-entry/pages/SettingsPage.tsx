@@ -4,11 +4,12 @@ import { formatBytes } from '../../lib/format'
 import { useAuth } from '../../stores/auth'
 import { useSettings } from '../../stores/settings'
 
-type Section = 'general' | 'rewind' | 'transcription' | 'account' | 'advanced' | 'about'
+type Section = 'general' | 'rewind' | 'proactive' | 'transcription' | 'account' | 'advanced' | 'about'
 
 const SECTIONS: { key: Section; label: string }[] = [
   { key: 'general', label: 'General' },
   { key: 'rewind', label: 'Rewind' },
+  { key: 'proactive', label: 'Proactive' },
   { key: 'transcription', label: 'Transcription' },
   { key: 'account', label: 'Account' },
   { key: 'advanced', label: 'Advanced' },
@@ -151,6 +152,43 @@ export function SettingsPage() {
               </SettingRow>
             </SectionCard>
           </>
+        )}
+
+        {section === 'proactive' && (
+          <SectionCard title="Proactive Assistant">
+            <SettingRow
+              label="Enable proactive assistant"
+              description="Periodically read recent screen activity to extract memories, tasks, and useful nudges"
+            >
+              <Toggle
+                on={settings.proactiveEnabled}
+                onChange={(v) => void update({ proactiveEnabled: v, rewindEnabled: v ? true : settings.rewindEnabled })}
+              />
+            </SettingRow>
+            <SettingRow label="Analysis interval">
+              <select
+                value={settings.proactiveIntervalMs}
+                onChange={(e) => void update({ proactiveIntervalMs: parseInt(e.target.value, 10) })}
+              >
+                <option value={120000}>Every 2 minutes</option>
+                <option value={180000}>Every 3 minutes (default)</option>
+                <option value={300000}>Every 5 minutes</option>
+                <option value={600000}>Every 10 minutes</option>
+              </select>
+            </SettingRow>
+            <SettingRow label="Show insight notifications" description="Surface nudges in the floating bar as they happen">
+              <Toggle
+                on={settings.proactiveNotifications}
+                onChange={(v) => void update({ proactiveNotifications: v })}
+              />
+            </SettingRow>
+            <SettingRow
+              label="Privacy"
+              description="Screen text stays on this device; only short excerpts are sent to the model for analysis, same as the Mac app"
+            >
+              <span style={{ fontSize: 12, color: 'var(--text-quaternary)' }}>local-first</span>
+            </SettingRow>
+          </SectionCard>
         )}
 
         {section === 'transcription' && (

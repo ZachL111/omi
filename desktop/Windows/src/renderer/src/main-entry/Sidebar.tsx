@@ -6,6 +6,7 @@ import {
   IconConversations,
   IconDashboard,
   IconHelp,
+  IconInsights,
   IconMemories,
   IconRewind,
   IconSettings,
@@ -14,6 +15,7 @@ import {
 } from '../components/Icons'
 import { useAuth } from '../stores/auth'
 import { useLive } from '../stores/conversations'
+import { useProactive } from '../stores/proactive'
 import { useSettings } from '../stores/settings'
 import type { Page } from './App'
 
@@ -28,6 +30,7 @@ const NAV: { page: Page; label: string; icon: React.FC<{ size?: number }> }[] = 
   { page: 'memories', label: 'Memories', icon: IconMemories },
   { page: 'tasks', label: 'Tasks', icon: IconTasks },
   { page: 'rewind', label: 'Rewind', icon: IconRewind },
+  { page: 'insights', label: 'Insights', icon: IconInsights },
   { page: 'apps', label: 'Apps', icon: IconApps }
 ]
 
@@ -59,6 +62,7 @@ export function Sidebar({ page, onNavigate }: { page: Page; onNavigate: (p: Page
   const auth = useAuth((s) => s.state)
   const signOut = useAuth((s) => s.signOut)
   const live = useLive()
+  const unreadInsights = useProactive((s) => s.status?.unread ?? 0)
   const { settings, update } = useSettings()
 
   useEffect(() => {
@@ -170,6 +174,25 @@ export function Sidebar({ page, onNavigate }: { page: Page; onNavigate: (p: Page
                     animation: 'pulse 1.6s ease-in-out infinite'
                   }}
                 />
+              )}
+              {!collapsed && p === 'insights' && unreadInsights > 0 && (
+                <span
+                  style={{
+                    minWidth: 18,
+                    height: 18,
+                    padding: '0 5px',
+                    borderRadius: 9,
+                    background: 'var(--purple-primary)',
+                    color: '#fff',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {unreadInsights}
+                </span>
               )}
             </button>
           )

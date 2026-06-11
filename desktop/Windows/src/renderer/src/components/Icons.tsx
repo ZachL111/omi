@@ -55,6 +55,14 @@ export const IconRewind = ({ size = 17, className }: IconProps) => (
   </svg>
 )
 
+export const IconInsights = ({ size = 17, className }: IconProps) => (
+  <svg {...base(size)} className={className}>
+    <path d="M9 18h6" />
+    <path d="M10 21h4" />
+    <path d="M12 3a6 6 0 0 0-3.5 10.9c.5.4.8.9.9 1.5l.1.6h5l.1-.6c.1-.6.4-1.1.9-1.5A6 6 0 0 0 12 3z" />
+  </svg>
+)
+
 export const IconApps = ({ size = 17, className }: IconProps) => (
   <svg {...base(size)} className={className}>
     <path d="M12 2l3 3-3 3-3-3z" />

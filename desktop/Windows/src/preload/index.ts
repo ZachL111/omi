@@ -4,6 +4,9 @@ import type {
   ApiResponse,
   AppSettings,
   AuthState,
+  Insight,
+  ProactiveNotification,
+  ProactiveStatus,
   RewindFrame,
   ScreenshotResult,
   TranscribeEvent
@@ -102,6 +105,24 @@ const api = {
       const handler = (_e: unknown, s: unknown) => cb(s)
       ipcRenderer.on('rewind:status', handler)
       return () => ipcRenderer.removeListener('rewind:status', handler)
+    }
+  },
+  proactive: {
+    list: (): Promise<Insight[]> => ipcRenderer.invoke('proactive:list'),
+    status: (): Promise<ProactiveStatus> => ipcRenderer.invoke('proactive:status'),
+    runNow: (): Promise<void> => ipcRenderer.invoke('proactive:run-now'),
+    markRead: (id: number): Promise<void> => ipcRenderer.invoke('proactive:mark-read', id),
+    markAllRead: (): Promise<void> => ipcRenderer.invoke('proactive:mark-all-read'),
+    remove: (id: number): Promise<void> => ipcRenderer.invoke('proactive:delete', id),
+    onStatus: (cb: (status: ProactiveStatus) => void): (() => void) => {
+      const handler = (_e: unknown, s: ProactiveStatus) => cb(s)
+      ipcRenderer.on('proactive:status', handler)
+      return () => ipcRenderer.removeListener('proactive:status', handler)
+    },
+    onNotification: (cb: (n: ProactiveNotification) => void): (() => void) => {
+      const handler = (_e: unknown, n: ProactiveNotification) => cb(n)
+      ipcRenderer.on('proactive:notification', handler)
+      return () => ipcRenderer.removeListener('proactive:notification', handler)
     }
   },
   system: {

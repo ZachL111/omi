@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { IconCamera, IconClose, IconMic, IconSend, IconSettings } from '../components/Icons'
+import { IconCamera, IconClose, IconInsights, IconMic, IconSend, IconSettings } from '../components/Icons'
 import { Markdown, Spinner } from '../components/ui'
 import { PcmCapture } from '../lib/audio'
 import { useAuth } from '../stores/auth'
 import { useChat } from '../stores/chat'
+import type { ProactiveNotification } from '../../../shared/types'
+
+const NOTIFICATION_SIZE = { width: 430, height: 112 }
 
 // FloatingControlBarView.swift counterpart. States: pill -> bar (hover) ->
 // ask input -> AI conversation; push-to-talk voice input via transcribe-stream.
@@ -32,6 +35,8 @@ export function FloatingBar() {
   const [listening, setListening] = useState(false)
   const [level, setLevel] = useState(0)
   const [interim, setInterim] = useState('')
+  const [notif, setNotif] = useState<ProactiveNotification | null>(null)
+  const notifTimer = useRef<number | null>(null)
   const collapseTimer = useRef<number | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
@@ -71,6 +76,32 @@ export function FloatingBar() {
       if (stateRef.current === 'input' || stateRef.current === 'conversation') goTo('pill')
       else goTo('input')
     })
+  }, [])
+
+  const dismissNotif = () => {
+    if (notifTimer.current) clearTimeout(notifTimer.current)
+    notifTimer.current = null
+    setNotif(null)
+    if (stateRef.current === 'pill') {
+      const size = SIZES.pill
+      window.omi.floating.setSize(size.width, size.height)
+    }
+  }
+
+  // Proactive insight notifications (the Mac app shows these below the bar).
+  useEffect(() => {
+    const show = (n: ProactiveNotification) => {
+      if (stateRef.current !== 'pill') return // don't interrupt an active ask/conversation
+      setNotif(n)
+      window.omi.floating.setSize(NOTIFICATION_SIZE.width, NOTIFICATION_SIZE.height)
+      if (notifTimer.current) clearTimeout(notifTimer.current)
+      notifTimer.current = window.setTimeout(() => dismissNotif(), 12000)
+    }
+    if (import.meta.env.DEV) {
+      ;(window as unknown as { __omiTestNotif?: (n: ProactiveNotification) => void }).__omiTestNotif = show
+    }
+    return window.omi.proactive.onNotification(show)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -156,6 +187,21 @@ export function FloatingBar() {
   }
 
   // ---------- renders ----------
+
+  if (state === 'pill' && notif) {
+    return (
+      <div style={{ padding: 2, height: '100vh' }}>
+        <NotificationCard
+          notif={notif}
+          onView={() => {
+            window.omi.floating.openMain('insights')
+            dismissNotif()
+          }}
+          onDismiss={dismissNotif}
+        />
+      </div>
+    )
+  }
 
   if (state === 'pill') {
     return (
@@ -384,6 +430,103 @@ export function FloatingBar() {
           )}
         </div>
         {last?.streaming === false && null}
+      </div>
+    </div>
+  )
+}
+
+function NotificationCard({
+  notif,
+  onView,
+  onDismiss
+}: {
+  notif: ProactiveNotification
+  onView: () => void
+  onDismiss: () => void
+}) {
+  const accent =
+    notif.category === 'focus' ? '#3B82F6' : notif.category === 'reminder' ? '#F59E0B' : 'var(--purple-secondary)'
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: 11,
+        height: 'calc(100vh - 4px)',
+        padding: '12px 13px',
+        borderRadius: 18,
+        background: 'rgba(18, 18, 22, 0.95)',
+        border: '1px solid rgba(255, 255, 255, 0.13)',
+        boxShadow: '0 8px 28px rgba(0,0,0,0.5)'
+      }}
+    >
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 9,
+          background: `${accent}22`,
+          color: accent,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }}
+      >
+        <IconInsights size={17} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span
+            style={{
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: '#fff',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flex: 1
+            }}
+          >
+            {notif.title}
+          </span>
+          <button
+            onClick={onDismiss}
+            title="Dismiss"
+            style={{ color: 'rgba(255,255,255,0.5)', padding: 2, flexShrink: 0 }}
+          >
+            <IconClose size={11} />
+          </button>
+        </div>
+        <div
+          style={{
+            fontSize: 11.5,
+            color: 'rgba(255,255,255,0.7)',
+            lineHeight: 1.4,
+            marginTop: 2,
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical'
+          }}
+        >
+          {notif.body}
+        </div>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: 'flex', gap: 7 }}>
+          <button
+            onClick={onView}
+            style={{
+              fontSize: 11.5,
+              fontWeight: 600,
+              color: '#fff',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: 8,
+              padding: '4px 12px'
+            }}
+          >
+            View in Omi
+          </button>
+        </div>
       </div>
     </div>
   )

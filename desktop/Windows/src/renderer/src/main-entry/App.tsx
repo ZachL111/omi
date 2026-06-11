@@ -9,10 +9,12 @@ import { ChatPage } from './pages/ChatPage'
 import { MemoriesPage } from './pages/MemoriesPage'
 import { TasksPage } from './pages/TasksPage'
 import { RewindPage } from './pages/RewindPage'
+import { InsightsPage } from './pages/InsightsPage'
 import { AppsPage } from './pages/AppsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { HelpPage } from './pages/HelpPage'
 import { Spinner } from '../components/ui'
+import { useProactive } from '../stores/proactive'
 
 export type Page =
   | 'dashboard'
@@ -21,21 +23,34 @@ export type Page =
   | 'memories'
   | 'tasks'
   | 'rewind'
+  | 'insights'
   | 'apps'
   | 'settings'
   | 'help'
 
-const PAGE_ORDER: Page[] = ['dashboard', 'conversations', 'chat', 'memories', 'tasks', 'rewind', 'apps', 'settings']
+const PAGE_ORDER: Page[] = [
+  'dashboard',
+  'conversations',
+  'chat',
+  'memories',
+  'tasks',
+  'rewind',
+  'insights',
+  'apps',
+  'settings'
+]
 
 export function App() {
   const auth = useAuth((s) => s.state)
   const initAuth = useAuth((s) => s.init)
   const { settings, load: loadSettings } = useSettings()
+  const initProactive = useProactive((s) => s.init)
   const [page, setPage] = useState<Page>('dashboard')
 
   useEffect(() => {
     initAuth()
     void loadSettings()
+    initProactive()
     if (import.meta.env.DEV) {
       // Dev affordance for screenshot tooling.
       ;(window as unknown as { __omiPreviewNavigate?: (p: Page) => void }).__omiPreviewNavigate = setPage
@@ -106,6 +121,7 @@ export function App() {
           {page === 'memories' && <MemoriesPage />}
           {page === 'tasks' && <TasksPage />}
           {page === 'rewind' && <RewindPage />}
+          {page === 'insights' && <InsightsPage />}
           {page === 'apps' && <AppsPage />}
           {page === 'settings' && <SettingsPage />}
           {page === 'help' && <HelpPage />}
