@@ -33,6 +33,10 @@ portable:
 protocols:
   - name: Omi Computer
     schemes: [omi-computer]
+publish:
+  - provider: github
+    owner: ZachL111
+    repo: omi
 electronDownload:
   cache: .electron-cache
 npmRebuild: true
