@@ -130,17 +130,62 @@ export function createFloatingBar(): BrowserWindow {
   return floatingBar
 }
 
-/** Resize the floating bar around a fixed top-center anchor, clamped to the work area. */
+let resizeTween: NodeJS.Timeout | null = null
+
+// Spring-ish ease-out-back (slight overshoot), approximating the Mac's
+// spring(response: 0.3, dampingFraction: 0.85) on floating-bar state changes.
+function easeOutBack(t: number): number {
+  const c1 = 1.70158
+  const c3 = c1 + 1
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)
+}
+
+/** Resize the floating bar around a fixed top-center anchor, clamped to the work area.
+ *  Animated (~260ms spring) since Windows snaps OS window bounds instantly otherwise. */
 export function resizeFloatingBar(width: number, height: number): void {
   if (!floatingBar || floatingBar.isDestroyed()) return
-  const [x, y] = floatingBar.getPosition()
-  const [curW] = floatingBar.getSize()
+  const win = floatingBar
+  const [x, y] = win.getPosition()
+  const [curW, curH] = win.getSize()
   const display = screen.getDisplayNearestPoint({ x, y })
   const wa = display.workArea
-  let nx = Math.round(x + (curW - width) / 2)
-  nx = Math.max(wa.x, Math.min(nx, wa.x + wa.width - width))
-  const ny = Math.max(wa.y, Math.min(y, wa.y + wa.height - height))
-  floatingBar.setBounds({ x: nx, y: ny, width: Math.round(width), height: Math.round(height) })
+  const target = { w: Math.round(width), h: Math.round(height) }
+  let tx = Math.round(x + (curW - target.w) / 2)
+  tx = Math.max(wa.x, Math.min(tx, wa.x + wa.width - target.w))
+  const ty = Math.max(wa.y, Math.min(y, wa.y + wa.height - target.h))
+
+  if (resizeTween) {
+    clearInterval(resizeTween)
+    resizeTween = null
+  }
+  // Tiny changes (or first show) just snap.
+  if (Math.abs(curW - target.w) + Math.abs(curH - target.h) < 6) {
+    win.setBounds({ x: tx, y: ty, width: target.w, height: target.h })
+    return
+  }
+  const start = { w: curW, h: curH, x, y }
+  const DURATION = 260
+  const STEP = 16
+  let elapsed = 0
+  resizeTween = setInterval(() => {
+    if (win.isDestroyed()) {
+      if (resizeTween) clearInterval(resizeTween)
+      resizeTween = null
+      return
+    }
+    elapsed += STEP
+    const t = Math.min(1, elapsed / DURATION)
+    const e = easeOutBack(t)
+    const w = Math.round(start.w + (target.w - start.w) * e)
+    const h = Math.round(start.h + (target.h - start.h) * e)
+    const cx = Math.round(start.x + (tx - start.x) * t)
+    win.setBounds({ x: cx, y: ty, width: Math.max(8, w), height: Math.max(8, h) })
+    if (t >= 1) {
+      win.setBounds({ x: tx, y: ty, width: target.w, height: target.h })
+      if (resizeTween) clearInterval(resizeTween)
+      resizeTween = null
+    }
+  }, STEP)
 }
 
 export function toggleFloatingBar(visible?: boolean): boolean {

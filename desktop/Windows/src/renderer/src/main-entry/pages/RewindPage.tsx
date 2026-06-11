@@ -90,7 +90,7 @@ export function RewindPage() {
               <IconSearch size={14} />
             </span>
             <input
-              placeholder="Search everything you've seen…"
+              placeholder="Search your screen history..."
               value={query}
               onChange={(e) => onSearch(e.target.value)}
               style={{ width: '100%', paddingLeft: 32 }}

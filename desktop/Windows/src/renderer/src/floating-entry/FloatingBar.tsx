@@ -242,7 +242,7 @@ export function FloatingBar() {
               width: 28,
               height: 6,
               borderRadius: 3,
-              background: 'rgba(255, 255, 255, 0.55)',
+              background: 'rgba(255, 255, 255, 0.5)',
               boxShadow: '0 1px 4px rgba(0,0,0,0.4)'
             }}
           />
@@ -268,7 +268,7 @@ export function FloatingBar() {
                 goTo('input')
                 void startVoice()
               }}
-              style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.2 }}
+              style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', lineHeight: 1.2 }}
             >
               Push to talk
             </button>
@@ -539,9 +539,9 @@ function NotificationCard({
     >
       <div
         style={{
-          width: 32,
-          height: 32,
-          borderRadius: 9,
+          width: 34,
+          height: 34,
+          borderRadius: 10,
           background: `${accent}22`,
           color: accent,
           display: 'flex',
@@ -556,7 +556,7 @@ function NotificationCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span
             style={{
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: 600,
               color: '#fff',
               overflow: 'hidden',
@@ -577,7 +577,7 @@ function NotificationCard({
         </div>
         <div
           style={{
-            fontSize: 11.5,
+            fontSize: 12,
             color: 'rgba(255,255,255,0.7)',
             lineHeight: 1.4,
             marginTop: 2,
@@ -594,7 +594,7 @@ function NotificationCard({
           <button
             onClick={onView}
             style={{
-              fontSize: 11.5,
+              fontSize: 10,
               fontWeight: 600,
               color: '#fff',
               background: 'rgba(255,255,255,0.1)',
@@ -617,7 +617,7 @@ function shellStyle(): React.CSSProperties {
     height: 'calc(100vh - 4px)',
     borderRadius: 20,
     background: 'rgba(18, 18, 22, 0.92)',
-    border: '1px solid rgba(255, 255, 255, 0.13)',
+    border: '1px solid rgba(255, 255, 255, 0.15)',
     boxShadow: '0 8px 28px rgba(0,0,0,0.5)',
     overflow: 'visible'
   }

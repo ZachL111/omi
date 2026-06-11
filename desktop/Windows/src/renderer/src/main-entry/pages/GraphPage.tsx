@@ -6,12 +6,13 @@ import type { KnowledgeGraphEdge, KnowledgeGraphNode } from '../../api/types'
 
 // Knowledge graph — 2D force-directed layout. The Mac app renders this in 3D
 // (SceneKit); node-type colors match MemoryGraphPage.swift.
+// macOS dark-mode system colors, matching MemoryGraphPage.swift node types.
 const TYPE_COLOR: Record<string, string> = {
-  person: '#22D3EE',
-  place: '#00FF9E',
-  organization: '#F59E0B',
-  thing: '#A855F7',
-  concept: '#3B82F6'
+  person: '#64D2FF', // .cyan
+  place: '#00FF9E', // mint Color(0,1,0.62)
+  organization: '#FF9F0A', // .orange
+  thing: '#BF5AF2', // .purple
+  concept: '#0A84FF' // .systemBlue
 }
 
 interface Pos {
@@ -162,11 +163,11 @@ export function GraphPage() {
           </div>
         ) : nodes.length === 0 ? (
           <EmptyState
-            title="Your brain map will appear here"
-            subtitle="Once you have enough linked memories, Omi maps the people, places and concepts in your life. Try Rebuild graph."
+            title="Brain map will appear once enough linked memories are available"
+            subtitle="Omi maps the people, places and concepts in your life. Try Rebuild graph."
           />
         ) : (
-          <div className="card" style={{ height: '100%', overflow: 'hidden', background: '#0c0c10' }}>
+          <div className="card" style={{ height: '100%', overflow: 'hidden', background: '#1A1A1A' }}>
             <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" data-tick={tick}>
               {renderEdges.map((e) => {
                 const a = posRef.current.get(e.source_id)
@@ -176,7 +177,7 @@ export function GraphPage() {
               })}
               {userPos && (
                 <g>
-                  <circle cx={userPos.x} cy={userPos.y} r={20} fill="#fff" />
+                  <circle cx={userPos.x} cy={userPos.y} r={30} fill="#fff" />
                   <text x={userPos.x} y={userPos.y + 36} textAnchor="middle" fill="#fff" fontSize={13} fontWeight={600}>
                     {auth?.name || 'You'}
                   </text>
@@ -188,7 +189,7 @@ export function GraphPage() {
                 const color = TYPE_COLOR[n.node_type ?? 'concept'] || '#3B82F6'
                 return (
                   <g key={n.id}>
-                    <circle cx={p.x} cy={p.y} r={11} fill={color} opacity={0.9} />
+                    <circle cx={p.x} cy={p.y} r={14} fill={color} opacity={0.9} />
                     <text x={p.x} y={p.y + 24} textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize={11}>
                       {n.label}
                     </text>

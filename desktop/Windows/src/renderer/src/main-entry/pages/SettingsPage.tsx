@@ -31,7 +31,7 @@ const SECTIONS: { key: Section; label: string }[] = [
   { key: 'voice', label: 'Voice' },
   { key: 'privacy', label: 'Privacy' },
   { key: 'account', label: 'Account' },
-  { key: 'plan', label: 'Plan & Usage' },
+  { key: 'plan', label: 'Plan and Usage' },
   { key: 'shortcuts', label: 'Shortcuts' },
   { key: 'advanced', label: 'Advanced' },
   { key: 'about', label: 'About' }
@@ -84,7 +84,7 @@ export function SettingsPage() {
 
   return (
     <div style={{ display: 'flex', height: '100%' }}>
-      <div style={{ width: 190, borderRight: '1px solid var(--border)', padding: '46px 10px 14px', flexShrink: 0 }}>
+      <div style={{ width: 260, borderRight: '1px solid var(--border)', padding: '46px 12px 14px', flexShrink: 0 }}>
         {SECTIONS.map((s) => (
           <button
             key={s.key}
@@ -93,7 +93,7 @@ export function SettingsPage() {
               display: 'block',
               width: '100%',
               textAlign: 'left',
-              padding: '9px 12px',
+              padding: '11px 12px',
               borderRadius: 11,
               fontSize: 13.5,
               color: section === s.key ? 'var(--text-primary)' : 'var(--text-tertiary)',
@@ -107,7 +107,7 @@ export function SettingsPage() {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '46px 26px 26px', minWidth: 0 }}>
-        <div className="page-title" style={{ marginBottom: 20, fontSize: 24 }}>
+        <div className="page-title" style={{ marginBottom: 20, fontSize: 28, fontWeight: 700 }}>
           {SECTIONS.find((s) => s.key === section)?.label}
         </div>
 
