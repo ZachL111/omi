@@ -93,6 +93,17 @@ const api = {
     /** Arm an app-initiated display-media capture; must be called right before getDisplayMedia. */
     armLoopback: (): void => ipcRenderer.send('capture:arm-loopback')
   },
+  realtime: {
+    start: (): Promise<{ ok: boolean; inputRate?: number; provider?: string }> => ipcRenderer.invoke('realtime:start'),
+    sendAudio: (chunk: ArrayBuffer): void => ipcRenderer.send('realtime:audio', chunk),
+    commit: (): void => ipcRenderer.send('realtime:commit'),
+    stop: (): void => ipcRenderer.send('realtime:stop'),
+    onEvent: (cb: (e: Record<string, unknown>) => void): (() => void) => {
+      const handler = (_e: unknown, ev: Record<string, unknown>) => cb(ev)
+      ipcRenderer.on('realtime:event', handler)
+      return () => ipcRenderer.removeListener('realtime:event', handler)
+    }
+  },
   rewind: {
     list: (day: string | null, limit?: number, offset?: number): Promise<RewindFrame[]> =>
       ipcRenderer.invoke('rewind:list', day, limit, offset),

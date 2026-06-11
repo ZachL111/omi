@@ -3,6 +3,7 @@
 
 export interface PcmCaptureOptions {
   systemAudio: boolean
+  sampleRate?: number
   onFrame: (frame: ArrayBuffer) => void
   onLevel?: (rms: number) => void
 }
@@ -15,7 +16,7 @@ export class PcmCapture {
   private levelTimer: number | null = null
 
   async start(opts: PcmCaptureOptions): Promise<void> {
-    this.ctx = new AudioContext({ sampleRate: 16000 })
+    this.ctx = new AudioContext({ sampleRate: opts.sampleRate ?? 16000 })
     await this.ctx.audioWorklet.addModule('pcm-worklet.js')
 
     const mix = this.ctx.createGain()

@@ -8,6 +8,7 @@ import { listFrames, listDays, searchFrames, getFrame, latestOcrText } from './r
 import { getRewindStatus } from './rewind/capturer'
 import { registerApiIpc } from './apiProxy'
 import { registerTranscriptionIpc } from './transcription'
+import { registerRealtimeIpc } from './realtime'
 import { registerCaptureIpc } from './capture'
 import { listInsights, markRead, markAllRead, deleteInsight } from './proactive/store'
 import { getProactiveStatus, runProactiveNow } from './proactive/engine'
@@ -18,6 +19,7 @@ import { getFocusStatus, listSessions as listFocusSessions, todaySummary } from 
 export function registerIpc(): void {
   registerApiIpc()
   registerTranscriptionIpc()
+  registerRealtimeIpc()
   registerCaptureIpc()
 
   ipcMain.handle('auth:get-state', () => getAuthState())

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { IconCamera, IconClose, IconInsights, IconMic, IconSend, IconSettings } from '../components/Icons'
+import { IconCamera, IconClose, IconInsights, IconMic, IconPhone, IconSend, IconSettings } from '../components/Icons'
 import { Markdown, Spinner } from '../components/ui'
 import { PcmCapture } from '../lib/audio'
+import { RealtimeVoice } from '../lib/realtimeVoice'
 import { useAuth } from '../stores/auth'
 import { useChat } from '../stores/chat'
 import type { ProactiveNotification } from '../../../shared/types'
@@ -9,21 +10,22 @@ import type { ProactiveNotification } from '../../../shared/types'
 const NOTIFICATION_SIZE = { width: 430, height: 112 }
 
 // FloatingControlBarView.swift counterpart. States: pill -> bar (hover) ->
-// ask input -> AI conversation; push-to-talk voice input via transcribe-stream.
+// ask input -> AI conversation; push-to-talk + realtime voice.
 
-type BarState = 'pill' | 'bar' | 'input' | 'conversation'
+type BarState = 'pill' | 'bar' | 'input' | 'conversation' | 'voice'
 
 const SIZES: Record<BarState, { width: number; height: number }> = {
   pill: { width: 56, height: 22 },
   bar: { width: 210, height: 50 },
   input: { width: 430, height: 96 },
-  conversation: { width: 430, height: 440 }
+  conversation: { width: 430, height: 440 },
+  voice: { width: 360, height: 230 }
 }
 
 function initialState(): BarState {
-  // Dev affordance: floating.html?state=bar|input|conversation forces a start state.
+  // Dev affordance: floating.html?state=bar|input|conversation|voice forces a start state.
   const forced = new URLSearchParams(location.search).get('state') as BarState | null
-  return forced && ['pill', 'bar', 'input', 'conversation'].includes(forced) ? forced : 'pill'
+  return forced && ['pill', 'bar', 'input', 'conversation', 'voice'].includes(forced) ? forced : 'pill'
 }
 
 export function FloatingBar() {
@@ -41,9 +43,33 @@ export function FloatingBar() {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
   const pttCapture = useRef<PcmCapture | null>(null)
+  const realtime = useRef<RealtimeVoice | null>(null)
+  const [voiceStatus, setVoiceStatus] = useState<'connecting' | 'live' | 'error'>('connecting')
+  const [userTranscript, setUserTranscript] = useState('')
+  const [aiTranscript, setAiTranscript] = useState('')
   const chat = useChat()
   const auth = useAuth((s) => s.state)
   const initAuth = useAuth((s) => s.init)
+
+  const startRealtime = async () => {
+    goTo('voice')
+    setVoiceStatus('connecting')
+    setUserTranscript('')
+    setAiTranscript('')
+    realtime.current = new RealtimeVoice()
+    const ok = await realtime.current.start({
+      onStatus: (s) => setVoiceStatus(s === 'connected' ? 'live' : s === 'error' ? 'error' : 'connecting'),
+      onInputTranscript: (t) => setUserTranscript((prev) => (prev ? prev + ' ' : '') + t),
+      onOutputTranscript: (t) => setAiTranscript((prev) => prev + t)
+    })
+    if (!ok) setVoiceStatus('error')
+  }
+
+  const stopRealtime = () => {
+    realtime.current?.stop()
+    realtime.current = null
+    goTo('pill')
+  }
 
   useEffect(() => {
     initAuth()
@@ -244,15 +270,64 @@ export function FloatingBar() {
               Push to talk
             </button>
           </div>
-          <div style={{ position: 'relative', alignSelf: 'flex-start', padding: '4px 6px 0 0' }}>
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              style={{ color: 'rgba(255,255,255,0.7)', padding: 2 }}
-              title="Options"
-            >
-              <IconSettings size={11} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '0 8px 0 0' }}>
+            <button onClick={() => void startRealtime()} style={{ color: 'rgba(255,255,255,0.75)', padding: 2 }} title="Live voice">
+              <IconPhone size={13} />
             </button>
-            {menuOpen && <GearMenu onClose={() => setMenuOpen(false)} />}
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setMenuOpen((v) => !v)} style={{ color: 'rgba(255,255,255,0.7)', padding: 2 }} title="Options">
+                <IconSettings size={11} />
+              </button>
+              {menuOpen && <GearMenu onClose={() => setMenuOpen(false)} />}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (state === 'voice') {
+    return (
+      <div style={{ padding: 2, height: '100vh' }}>
+        <div style={{ ...shellStyle(), flexDirection: 'column', alignItems: 'stretch', padding: '14px 16px', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 9, height: 9, borderRadius: 5, background: voiceStatus === 'live' ? 'var(--success)' : voiceStatus === 'error' ? 'var(--error)' : 'var(--warning)', animation: voiceStatus === 'live' ? 'pulse 1.4s ease-in-out infinite' : 'none' }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', flex: 1 }}>
+              {voiceStatus === 'live' ? 'Listening…' : voiceStatus === 'error' ? 'Voice unavailable' : 'Connecting…'}
+            </span>
+            <DragHandle inline />
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', fontSize: 13, lineHeight: 1.5 }}>
+            {userTranscript && (
+              <div style={{ color: 'rgba(255,255,255,0.9)', marginBottom: 8 }}>
+                <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.45)' }}>You</span>
+                <div>{userTranscript}</div>
+              </div>
+            )}
+            {aiTranscript && (
+              <div style={{ color: 'var(--purple-light)' }}>
+                <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.45)' }}>omi</span>
+                <div>{aiTranscript}</div>
+              </div>
+            )}
+            {!userTranscript && !aiTranscript && voiceStatus === 'live' && (
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Speak — pause and tap Done to get a reply.</div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => realtime.current?.commit()}
+              disabled={voiceStatus !== 'live'}
+              style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: '#fff', background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '7px 0' }}
+            >
+              Done speaking
+            </button>
+            <button
+              onClick={stopRealtime}
+              style={{ fontSize: 12.5, color: 'var(--error)', background: 'rgba(239,68,68,0.12)', borderRadius: 10, padding: '7px 14px' }}
+            >
+              End
+            </button>
           </div>
         </div>
       </div>
