@@ -3,6 +3,7 @@ import { api } from '../api/client'
 import type { ServerConversation } from '../api/types'
 import type { TranscriptSegment } from '../../../shared/types'
 import { PcmCapture } from '../lib/audio'
+import { chatCompletion } from '../api/chat'
 
 interface ConversationsStore {
   items: ServerConversation[]
@@ -101,6 +102,7 @@ export type RecordingStatus = 'idle' | 'connecting' | 'recording' | 'stopping'
 interface LiveStore {
   status: RecordingStatus
   segments: TranscriptSegment[]
+  notes: string[]
   level: number
   systemAudio: boolean
   statusDetail: string | null
@@ -112,16 +114,52 @@ interface LiveStore {
 let capture: PcmCapture | null = null
 let unsubEvents: (() => void) | null = null
 
+// Live notes: generate a short note every ~50 new transcript words (LiveNotesMonitor.swift).
+let liveNotesCursor = 0
+let liveNotesBusy = false
+async function maybeGenerateNote(): Promise<void> {
+  if (liveNotesBusy) return
+  const segs = useLive.getState().segments
+  const fullText = segs.map((s) => s.text).join(' ')
+  const words = fullText.split(/\s+/).filter(Boolean)
+  if (words.length - liveNotesCursor < 50) return
+  liveNotesBusy = true
+  const excerpt = words.slice(Math.max(0, words.length - 120)).join(' ')
+  liveNotesCursor = words.length
+  try {
+    const existing = useLive.getState().notes.slice(-10).join('; ')
+    const note = await chatCompletion(
+      [
+        {
+          role: 'system',
+          content:
+            'You are a concise meeting note-taker. Given a transcript excerpt, output ONE note of 3-10 words capturing the key point. No quotes, no preamble, be specific, avoid repeating existing notes.'
+        },
+        { role: 'user', content: `Existing notes: ${existing || 'none'}\n\nTranscript:\n${excerpt}` }
+      ],
+      'claude-haiku-4-5-20251001'
+    )
+    const clean = note.trim().replace(/^["'-\s]+|["'\s]+$/g, '')
+    if (clean) useLive.setState({ notes: [...useLive.getState().notes, clean] })
+  } catch {
+    // best-effort
+  } finally {
+    liveNotesBusy = false
+  }
+}
+
 export const useLive = create<LiveStore>((set, get) => ({
   status: 'idle',
   segments: [],
+  notes: [],
   level: 0,
   systemAudio: true,
   statusDetail: null,
   setSystemAudio: (v) => set({ systemAudio: v }),
   start: async () => {
     if (get().status !== 'idle') return
-    set({ status: 'connecting', segments: [], statusDetail: null })
+    set({ status: 'connecting', segments: [], notes: [], statusDetail: null })
+    liveNotesCursor = 0
 
     unsubEvents?.()
     unsubEvents = window.omi.transcribe.onEvent('conversation', (event) => {
@@ -138,6 +176,7 @@ export const useLive = create<LiveStore>((set, get) => ({
           }
         }
         set({ segments: merged })
+        void maybeGenerateNote()
       } else if (event.type === 'status') {
         if (event.status === 'connected') set({ status: 'recording' })
         else if (event.status === 'error') set({ statusDetail: event.detail ?? 'connection error' })
