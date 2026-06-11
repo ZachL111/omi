@@ -95,6 +95,28 @@ export function latestOcrText(maxAgeMs: number): string | null {
   return row.ocr
 }
 
+/** Deduped OCR text from frames in the last `windowMs`, newest first — proactive context. */
+export function recentOcrText(windowMs: number, maxChars = 8000): string | null {
+  const cutoff = Date.now() - windowMs
+  const rows = getDb()
+    .prepare('SELECT ocr FROM frames WHERE ocr IS NOT NULL AND ts >= ? ORDER BY ts DESC LIMIT 40')
+    .all(cutoff) as { ocr: string }[]
+  if (rows.length === 0) return null
+  const seen = new Set<string>()
+  const parts: string[] = []
+  let total = 0
+  for (const r of rows) {
+    const text = r.ocr.trim()
+    const key = text.slice(0, 120)
+    if (!text || seen.has(key)) continue
+    seen.add(key)
+    parts.push(text)
+    total += text.length
+    if (total >= maxChars) break
+  }
+  return parts.length ? parts.join('\n---\n') : null
+}
+
 export function stats(): { frames: number; days: number; bytes: number } {
   const row = getDb()
     .prepare('SELECT COUNT(*) AS frames, COUNT(DISTINCT day) AS days, COALESCE(SUM(bytes),0) AS bytes FROM frames')

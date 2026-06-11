@@ -9,6 +9,8 @@ import { getRewindStatus } from './rewind/capturer'
 import { registerApiIpc } from './apiProxy'
 import { registerTranscriptionIpc } from './transcription'
 import { registerCaptureIpc } from './capture'
+import { listInsights, markRead, markAllRead, deleteInsight } from './proactive/store'
+import { getProactiveStatus, runProactiveNow } from './proactive/engine'
 
 export function registerIpc(): void {
   registerApiIpc()
@@ -71,6 +73,13 @@ export function registerIpc(): void {
       return null
     }
   })
+
+  ipcMain.handle('proactive:list', () => listInsights(100))
+  ipcMain.handle('proactive:status', () => getProactiveStatus())
+  ipcMain.handle('proactive:run-now', () => runProactiveNow())
+  ipcMain.handle('proactive:mark-read', (_e, id: number) => markRead(id))
+  ipcMain.handle('proactive:mark-all-read', () => markAllRead())
+  ipcMain.handle('proactive:delete', (_e, id: number) => deleteInsight(id))
 
   ipcMain.handle('app:version', () => app.getVersion())
   ipcMain.on('shell:open-external', (_e, url: string) => {

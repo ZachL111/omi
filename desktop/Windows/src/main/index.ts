@@ -9,6 +9,7 @@ import { registerHotkeys, watchHotkeySettings, unregisterAll } from './shortcuts
 import { installLoopbackAudioHandler } from './capture'
 import { startRewindEngine } from './rewind/capturer'
 import { ocrService } from './rewind/ocr'
+import { startProactiveEngine } from './proactive/engine'
 import { settings } from './settings'
 
 // App lifecycle, mirroring OmiApp.swift: single instance, protocol-scheme auth
@@ -63,6 +64,7 @@ if (!gotLock) {
     registerHotkeys()
     watchHotkeySettings()
     startRewindEngine()
+    startProactiveEngine()
     settings.on('changed', (next, prev) => {
       rebuildTrayMenu()
       if (next.launchAtLogin !== prev.launchAtLogin) {

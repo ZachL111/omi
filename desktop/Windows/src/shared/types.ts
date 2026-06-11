@@ -15,12 +15,40 @@ export interface AppSettings {
   transcriptionLanguage: string
   launchAtLogin: boolean
   fontScale: number
+  proactiveEnabled: boolean
+  proactiveIntervalMs: number
+  proactiveNotifications: boolean
   byokAnthropic: string
   byokOpenAI: string
   byokGemini: string
   byokDeepgram: string
   pythonApiUrl: string
   rustApiUrl: string
+}
+
+export interface Insight {
+  id: number
+  ts: number
+  title: string
+  body: string
+  category: string
+  sourceApp: string | null
+  read: number
+}
+
+export interface ProactiveStatus {
+  enabled: boolean
+  running: boolean
+  lastRunTs: number | null
+  lastError: string | null
+  unread: number
+}
+
+export interface ProactiveNotification {
+  id: number
+  title: string
+  body: string
+  category: string
 }
 
 export interface ApiRequest {
