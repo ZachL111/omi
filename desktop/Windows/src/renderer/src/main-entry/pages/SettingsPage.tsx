@@ -6,6 +6,7 @@ import { useSettings } from '../../stores/settings'
 
 type Section =
   | 'general'
+  | 'device'
   | 'rewind'
   | 'transcription'
   | 'notifications'
@@ -15,11 +16,13 @@ type Section =
   | 'privacy'
   | 'account'
   | 'plan'
+  | 'shortcuts'
   | 'advanced'
   | 'about'
 
 const SECTIONS: { key: Section; label: string }[] = [
   { key: 'general', label: 'General' },
+  { key: 'device', label: 'Device' },
   { key: 'rewind', label: 'Rewind' },
   { key: 'transcription', label: 'Transcription' },
   { key: 'notifications', label: 'Notifications' },
@@ -29,6 +32,7 @@ const SECTIONS: { key: Section; label: string }[] = [
   { key: 'privacy', label: 'Privacy' },
   { key: 'account', label: 'Account' },
   { key: 'plan', label: 'Plan & Usage' },
+  { key: 'shortcuts', label: 'Shortcuts' },
   { key: 'advanced', label: 'Advanced' },
   { key: 'about', label: 'About' }
 ]
@@ -211,6 +215,32 @@ export function SettingsPage() {
               description="Screen text stays on this device; only short excerpts are sent to the model for analysis, same as the Mac app"
             >
               <span style={{ fontSize: 12, color: 'var(--text-quaternary)' }}>local-first</span>
+            </SettingRow>
+          </SectionCard>
+        )}
+
+        {section === 'device' && (
+          <SectionCard title="Device">
+            <SettingRow label="Omi pendant" description="BLE pairing is iOS/macOS-only for now">
+              <span style={{ fontSize: 12.5, color: 'var(--text-quaternary)' }}>No device paired</span>
+            </SettingRow>
+            <SettingRow label="Get an omi device" description="Wearable that captures your day">
+              <button className="btn-secondary" style={{ fontSize: 12.5 }} onClick={() => window.omi.system.openExternal('https://www.omi.me')}>
+                Learn more
+              </button>
+            </SettingRow>
+          </SectionCard>
+        )}
+
+        {section === 'shortcuts' && (
+          <SectionCard title="Keyboard Shortcuts">
+            <SettingRow label="Ask omi" description="Summon the floating bar from anywhere">
+              <button className="btn-secondary" style={{ fontSize: 12.5 }} onClick={() => setCapturingHotkey(true)}>
+                {capturingHotkey ? 'Press keys…' : settings.hotkey.replace(/Control/g, 'Ctrl')}
+              </button>
+            </SettingRow>
+            <SettingRow label="Switch pages" description="Jump between sidebar pages">
+              <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)' }}>Ctrl + 1…9</span>
             </SettingRow>
           </SectionCard>
         )}

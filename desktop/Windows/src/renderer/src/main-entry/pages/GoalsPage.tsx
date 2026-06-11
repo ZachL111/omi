@@ -73,8 +73,17 @@ function GoalRow({ goal }: { goal: Goal }) {
 
   return (
     <div
-      className="card"
-      style={{ padding: 14, display: 'flex', gap: 12, alignItems: 'center' }}
+      style={{
+        padding: '12px 14px',
+        borderRadius: 16,
+        background: 'rgba(37, 37, 37, 0.72)',
+        border: '1px solid var(--border)',
+        display: 'flex',
+        gap: 12,
+        alignItems: 'center'
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(37, 37, 37, 0.9)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(37, 37, 37, 0.72)')}
     >
       <div
         style={{
@@ -93,7 +102,7 @@ function GoalRow({ goal }: { goal: Goal }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
-          <span style={{ fontSize: 13.5, fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {goal.title}
           </span>
           <span style={{ fontSize: 11.5, color: 'var(--text-quaternary)' }}>

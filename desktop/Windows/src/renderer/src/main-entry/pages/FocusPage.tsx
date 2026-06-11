@@ -47,7 +47,9 @@ export function FocusPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)' }}>
-            {settings.focusEnabled ? 'Monitoring' : 'Off'}
+            {settings.focusEnabled
+              ? `Monitoring · ${summary?.sessions ?? 0} session${(summary?.sessions ?? 0) === 1 ? '' : 's'} today`
+              : 'Off'}
           </span>
           <Toggle
             on={settings.focusEnabled}

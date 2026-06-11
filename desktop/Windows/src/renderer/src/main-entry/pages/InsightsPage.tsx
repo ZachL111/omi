@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { IconTrash } from '../../components/Icons'
 import { EmptyState } from '../../components/ui'
 import { timeAgo } from '../../lib/format'
@@ -11,23 +11,55 @@ const CATEGORY_COLOR: Record<string, string> = {
   reminder: '#F59E0B'
 }
 
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'insight', label: 'Insights' },
+  { key: 'focus', label: 'Focus' },
+  { key: 'reminder', label: 'Reminders' }
+]
+
 export function InsightsPage() {
   const store = useProactive()
   const { settings, update } = useSettings()
+  const [filter, setFilter] = useState('all')
+  const unread = store.insights.filter((i) => i.read === 0).length
 
   useEffect(() => {
     void store.load()
-    // Mark everything read when the user opens the page.
-    void store.markAllRead()
+    // Mark everything read shortly after opening (so the unread badge is visible first).
+    const t = setTimeout(() => void store.markAllRead(), 1500)
+    return () => clearTimeout(t)
   }, [])
 
   if (!settings) return null
+  const filtered = filter === 'all' ? store.insights : store.insights.filter((i) => i.category === filter)
 
   return (
     <div style={{ height: '100%', overflowY: 'auto', padding: '44px 26px 26px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
-          <div style={{ fontSize: 19, fontWeight: 700 }}>Insights</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <span style={{ fontSize: 19, fontWeight: 700 }}>Insights</span>
+            {unread > 0 && (
+              <span
+                style={{
+                  minWidth: 20,
+                  height: 20,
+                  padding: '0 6px',
+                  borderRadius: 10,
+                  background: 'var(--purple-primary)',
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {unread}
+              </span>
+            )}
+          </div>
           <div style={{ fontSize: 12.5, color: 'var(--text-quaternary)', marginTop: 2 }}>
             Omi watches your screen and surfaces what matters — memories and tasks are filed automatically
           </div>
@@ -71,8 +103,16 @@ export function InsightsPage() {
           subtitle="Omi analyzes your screen every few minutes. As soon as something useful surfaces, it'll appear here."
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {store.insights.map((i) => (
+        <>
+          <div style={{ display: 'flex', gap: 7, marginBottom: 14 }}>
+            {FILTERS.map((f) => (
+              <button key={f.key} className={`chip ${filter === f.key ? 'active' : ''}`} onClick={() => setFilter(f.key)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {filtered.map((i) => (
             <div key={i.id} className="card" style={{ padding: 14, display: 'flex', gap: 12 }}>
               <div
                 style={{
@@ -109,7 +149,8 @@ export function InsightsPage() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   )

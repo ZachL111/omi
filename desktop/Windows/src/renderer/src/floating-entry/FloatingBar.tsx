@@ -15,7 +15,7 @@ const NOTIFICATION_SIZE = { width: 430, height: 112 }
 type BarState = 'pill' | 'bar' | 'input' | 'conversation' | 'voice'
 
 const SIZES: Record<BarState, { width: number; height: number }> = {
-  pill: { width: 48, height: 20 },
+  pill: { width: 40, height: 14 },
   bar: { width: 210, height: 50 },
   input: { width: 430, height: 96 },
   conversation: { width: 430, height: 440 },
@@ -231,19 +231,22 @@ export function FloatingBar() {
 
   if (state === 'pill') {
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* Outer hit target stays ~full window; inner pill matches the Mac's 28x6 collapsed bar. */}
         <div
           onMouseEnter={onPillEnter}
-          style={{
-            width: 40,
-            height: 12,
-            marginTop: 4,
-            borderRadius: 6,
-            background: 'rgba(18, 18, 22, 0.88)',
-            border: '1px solid rgba(255, 255, 255, 0.14)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
-          }}
-        />
+          style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            style={{
+              width: 28,
+              height: 6,
+              borderRadius: 3,
+              background: 'rgba(255, 255, 255, 0.55)',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.4)'
+            }}
+          />
+        </div>
       </div>
     )
   }

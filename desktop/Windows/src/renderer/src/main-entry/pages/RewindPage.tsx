@@ -79,7 +79,7 @@ export function RewindPage() {
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)' }}>
-              {settings.rewindEnabled ? 'Capturing' : 'Paused'}
+              {settings.rewindEnabled ? 'Recording' : 'Paused'}
             </span>
             <Toggle on={settings.rewindEnabled} onChange={(v) => void update({ rewindEnabled: v })} />
           </div>
