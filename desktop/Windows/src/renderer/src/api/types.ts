@@ -76,10 +76,66 @@ export interface Goal {
   id: string
   title: string
   description?: string
-  goal_type?: 'boolean' | 'numeric'
+  goal_type?: 'boolean' | 'scale' | 'numeric'
   target_value?: number
   current_value?: number
+  min_value?: number
+  max_value?: number
   unit?: string
+  is_active?: boolean
+  completed_at?: string | null
+}
+
+export interface ScoreData {
+  score: number
+  completedTasks?: number
+  totalTasks?: number
+}
+
+export interface ScoreResponse {
+  daily?: ScoreData
+  weekly?: ScoreData
+  overall?: ScoreData
+  defaultTab?: string
+  date?: string
+}
+
+export interface StagedTask {
+  id: string
+  description: string
+  due_at?: string | null
+  priority?: string | null
+  category?: string | null
+  source?: string | null
+  relevance_score?: number
+}
+
+export interface Folder {
+  id: string
+  name: string
+  description?: string
+  color?: string
+  order?: number
+}
+
+export interface KnowledgeGraphNode {
+  id: string
+  label?: string
+  node_type?: string
+  aliases?: string[]
+  memory_ids?: string[]
+}
+
+export interface KnowledgeGraphEdge {
+  id: string
+  source_id: string
+  target_id: string
+  label?: string
+}
+
+export interface Person {
+  id: string
+  name: string
 }
 
 export interface ChatSession {

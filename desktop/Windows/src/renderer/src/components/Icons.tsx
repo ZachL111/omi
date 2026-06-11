@@ -55,6 +55,31 @@ export const IconRewind = ({ size = 17, className }: IconProps) => (
   </svg>
 )
 
+export const IconGoals = ({ size = 17, className }: IconProps) => (
+  <svg {...base(size)} className={className}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5" />
+    <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+  </svg>
+)
+
+export const IconFocus = ({ size = 17, className }: IconProps) => (
+  <svg {...base(size)} className={className}>
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+)
+
+export const IconGraph = ({ size = 17, className }: IconProps) => (
+  <svg {...base(size)} className={className}>
+    <circle cx="6" cy="7" r="2.4" />
+    <circle cx="18" cy="6" r="2.4" />
+    <circle cx="17" cy="17" r="2.4" />
+    <circle cx="7.5" cy="17.5" r="2.4" />
+    <path d="M8.2 7.6l7.5-1M8 9l8 6.5M16 8l-7.7 8" />
+  </svg>
+)
+
 export const IconInsights = ({ size = 17, className }: IconProps) => (
   <svg {...base(size)} className={className}>
     <path d="M9 18h6" />
