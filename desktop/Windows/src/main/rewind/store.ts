@@ -32,6 +32,14 @@ function getDb(): Database.Database {
   return db
 }
 
+/** Close the SQLite handle on quit so WAL is checkpointed cleanly. Idempotent. */
+export function closeRewindDb(): void {
+  if (db) {
+    db.close()
+    db = null
+  }
+}
+
 export function insertFrame(ts: number, day: string, path: string, bytes: number): number {
   const res = getDb()
     .prepare('INSERT INTO frames(ts, day, path, bytes) VALUES (?, ?, ?, ?)')
@@ -95,7 +103,7 @@ export function latestOcrText(maxAgeMs: number): string | null {
   return row.ocr
 }
 
-/** Deduped OCR text from frames in the last `windowMs`, newest first — proactive context. */
+/** Deduped OCR text from frames in the last `windowMs`, newest first, proactive context. */
 export function recentOcrText(windowMs: number, maxChars = 8000): string | null {
   const cutoff = Date.now() - windowMs
   const rows = getDb()
@@ -125,7 +133,8 @@ export function stats(): { frames: number; days: number; bytes: number } {
 }
 
 export function pruneOlderThan(days: number): number {
-  const cutoff = Date.now() - days * 24 * 3600 * 1000
+  // Floor the retention so a renderer-set 0 or negative value cannot wipe all history.
+  const cutoff = Date.now() - Math.max(1, days) * 24 * 3600 * 1000
   const d = getDb()
   const old = d.prepare('SELECT id, path, ocr FROM frames WHERE ts < ?').all(cutoff) as {
     id: number

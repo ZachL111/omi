@@ -88,7 +88,11 @@ export const useChat = create<ChatStore>((set, get) => ({
   userName: undefined,
   setUserName: (name) => set({ userName: name }),
   setSession: async (sessionId) => {
-    set({ sessionId, messages: [], historyLoaded: false })
+    // Cancel any in-flight stream from the previous session so its deltas and
+    // persistence do not bleed into the new one, and clear the streaming flag.
+    activeCancel?.()
+    activeCancel = null
+    set({ sessionId, messages: [], historyLoaded: false, streaming: false })
     await get().loadHistory()
   },
   loadHistory: async () => {
@@ -132,6 +136,12 @@ export const useChat = create<ChatStore>((set, get) => ({
     void persistMessage(sessionId, trimmed, 'human')
 
     const finish = (errorText?: string) => {
+      if (sessionId !== get().sessionId) {
+        // Session switched mid-stream: do not write into the new session, do not
+        // persist this reply to the old session, and leave activeCancel/streaming
+        // for whatever owns the current session.
+        return
+      }
       const finalText = errorText ?? get().messages.find((m) => m.id === assistantMsg.id)?.text ?? ''
       set({
         messages: get().messages.map((m) =>
@@ -159,6 +169,7 @@ export const useChat = create<ChatStore>((set, get) => ({
       const handle = streamChatCompletion(
         apiMessages,
         (delta) => {
+          if (sessionId !== get().sessionId) return
           set({
             messages: get().messages.map((m) => (m.id === assistantMsg.id ? { ...m, text: m.text + delta } : m))
           })
@@ -166,14 +177,14 @@ export const useChat = create<ChatStore>((set, get) => ({
         () => finish(),
         (status, body) => {
           if (withImage && opts?.imageDataUrl && (status === 400 || status === 422)) {
-            // Proxy may not accept image parts — retry with OCR text context instead.
+            // Proxy may not accept image parts, retry with OCR text context instead.
             run(false)
             return
           }
           if (status === 402 || status === 403) {
             finish('This feature needs an active Omi subscription or trial. Open omi.me to manage your plan.')
           } else if (status === 429) {
-            finish('Rate limited — give it a few seconds and try again.')
+            finish('Rate limited, give it a few seconds and try again.')
           } else {
             finish(`Something went wrong (HTTP ${status}). ${body.slice(0, 200)}`)
           }
@@ -193,5 +204,9 @@ export const useChat = create<ChatStore>((set, get) => ({
       messages: get().messages.map((m) => (m.streaming ? { ...m, streaming: false } : m))
     })
   },
-  clear: () => set({ messages: [] })
+  clear: () => {
+    activeCancel?.()
+    activeCancel = null
+    set({ messages: [], streaming: false })
+  }
 }))

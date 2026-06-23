@@ -25,8 +25,22 @@ interface Extraction {
 
 let timer: NodeJS.Timeout | null = null
 let running = false
+let stopped = false
 let lastRunTs: number | null = null
 let lastError: string | null = null
+
+// Bound each backend call so a hung request cannot wedge the engine. runOnce holds
+// the `running` flag across its awaits; a never-settling fetch would otherwise leave
+// running=true forever and block all future cycles.
+const REQUEST_TIMEOUT_MS = 30000
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let t: NodeJS.Timeout
+  const timeout = new Promise<never>((_, reject) => {
+    t = setTimeout(() => reject(new Error('request timed out')), ms)
+  })
+  return Promise.race([p.finally(() => clearTimeout(t)), timeout])
+}
 
 function broadcastStatus(): void {
   const s = settings.get()
@@ -37,7 +51,9 @@ function broadcastStatus(): void {
     lastError,
     unread: unreadCount()
   }
-  for (const wc of webContents.getAllWebContents()) wc.send('proactive:status', status)
+  for (const wc of webContents.getAllWebContents()) {
+    if (!wc.isDestroyed()) wc.send('proactive:status', status)
+  }
 }
 
 const SYSTEM_PROMPT =
@@ -45,7 +61,7 @@ const SYSTEM_PROMPT =
   'last few minutes. Extract only high-signal, durable items. Respond with STRICT JSON only, no prose, ' +
   'matching: {"app": string, "memories": [{"content": string}], "tasks": [{"description": string}], ' +
   '"insight": {"title": string, "body": string, "category": "focus"|"insight"|"reminder"} | null}. ' +
-  'Rules: memories are lasting facts about the user (preferences, projects, people, goals) — NOT transient ' +
+  'Rules: memories are lasting facts about the user (preferences, projects, people, goals), NOT transient' +
   'screen contents; at most 3. tasks are concrete actionable to-dos the user clearly needs to do; at most 3; ' +
   'omit vague ones. insight is at most one genuinely useful, specific nudge about what they could do next, or ' +
   'null. If nothing is high-signal, return empty arrays and null insight. Never invent details not supported ' +
@@ -56,21 +72,27 @@ function buildFingerprint(title: string): string {
 }
 
 async function persistMemory(content: string): Promise<void> {
-  await apiRequest({
-    method: 'POST',
-    url: 'v3/memories',
-    base: 'python',
-    body: JSON.stringify({ content, visibility: 'private', source: 'desktop', category: 'interesting' })
-  })
+  await withTimeout(
+    apiRequest({
+      method: 'POST',
+      url: 'v3/memories',
+      base: 'python',
+      body: JSON.stringify({ content, visibility: 'private', source: 'desktop', category: 'interesting' })
+    }),
+    REQUEST_TIMEOUT_MS
+  )
 }
 
 async function persistTask(description: string): Promise<void> {
-  await apiRequest({
-    method: 'POST',
-    url: 'v1/action-items',
-    base: 'python',
-    body: JSON.stringify({ description, source: 'proactive' })
-  })
+  await withTimeout(
+    apiRequest({
+      method: 'POST',
+      url: 'v1/action-items',
+      base: 'python',
+      body: JSON.stringify({ description, source: 'proactive' })
+    }),
+    REQUEST_TIMEOUT_MS
+  )
 }
 
 function parseExtraction(body: string): Extraction | null {
@@ -100,20 +122,23 @@ async function runOnce(): Promise<void> {
   running = true
   broadcastStatus()
   try {
-    const res = await apiRequest({
-      method: 'POST',
-      url: 'v2/chat/completions',
-      base: 'rust',
-      body: JSON.stringify({
-        model: EXTRACTION_MODEL,
-        stream: false,
-        max_tokens: 1024,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: `Screen text (most recent first):\n\n${screenText}` }
-        ]
-      })
-    })
+    const res = await withTimeout(
+      apiRequest({
+        method: 'POST',
+        url: 'v2/chat/completions',
+        base: 'rust',
+        body: JSON.stringify({
+          model: EXTRACTION_MODEL,
+          stream: false,
+          max_tokens: 1024,
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: `Screen text (most recent first):\n\n${screenText}` }
+          ]
+        })
+      }),
+      REQUEST_TIMEOUT_MS
+    )
     if (res.status < 200 || res.status >= 300) {
       lastError = `extraction HTTP ${res.status}`
       return
@@ -163,6 +188,7 @@ async function runOnce(): Promise<void> {
 
 function schedule(): void {
   if (timer) clearTimeout(timer)
+  if (stopped) return
   if (!settings.get().proactiveEnabled) {
     broadcastStatus()
     return
@@ -172,6 +198,16 @@ function schedule(): void {
     await runOnce()
     schedule()
   }, interval)
+}
+
+// Stop the engine on app quit: clear the timer so no analysis cycle fires during
+// shutdown. Idempotent.
+export function stopProactiveEngine(): void {
+  stopped = true
+  if (timer) {
+    clearTimeout(timer)
+    timer = null
+  }
 }
 
 export function startProactiveEngine(): void {

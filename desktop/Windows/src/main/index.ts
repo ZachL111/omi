@@ -7,10 +7,13 @@ import { createMainWindow, createFloatingBar, getMainWindow } from './windows'
 import { createTray, rebuildTrayMenu } from './tray'
 import { registerHotkeys, watchHotkeySettings, unregisterAll } from './shortcuts'
 import { installLoopbackAudioHandler } from './capture'
-import { startRewindEngine } from './rewind/capturer'
+import { startRewindEngine, stopRewindEngine } from './rewind/capturer'
 import { ocrService } from './rewind/ocr'
-import { startProactiveEngine } from './proactive/engine'
-import { startFocusEngine } from './focus/engine'
+import { closeRewindDb } from './rewind/store'
+import { startProactiveEngine, stopProactiveEngine } from './proactive/engine'
+import { closeProactiveDb } from './proactive/store'
+import { startFocusEngine, stopFocusEngine } from './focus/engine'
+import { closeFocusDb } from './focus/store'
 import { disposeGlow } from './focus/glow'
 import { scheduleStartupCheck } from './updater'
 import { settings } from './settings'
@@ -57,7 +60,7 @@ if (!gotLock) {
     registerIpc()
 
     session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
-      callback(['media', 'display-capture', 'notifications', 'clipboard-read'].includes(permission))
+      callback(['media', 'display-capture', 'notifications'].includes(permission))
     })
     installLoopbackAudioHandler()
 
@@ -94,7 +97,13 @@ if (!gotLock) {
 
   app.on('will-quit', () => {
     unregisterAll()
+    stopRewindEngine()
+    stopProactiveEngine()
+    stopFocusEngine()
     ocrService.dispose()
     disposeGlow()
+    closeRewindDb()
+    closeProactiveDb()
+    closeFocusDb()
   })
 }

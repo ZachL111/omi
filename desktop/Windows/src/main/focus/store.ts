@@ -28,6 +28,14 @@ function getDb(): Database.Database {
   return db
 }
 
+/** Close the SQLite handle on quit so WAL is checkpointed cleanly. Idempotent. */
+export function closeFocusDb(): void {
+  if (db) {
+    db.close()
+    db = null
+  }
+}
+
 export function addSession(s: {
   ts: number
   status: 'focused' | 'distracted'

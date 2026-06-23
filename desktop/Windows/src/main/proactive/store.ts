@@ -32,6 +32,14 @@ function getDb(): Database.Database {
   return db
 }
 
+/** Close the SQLite handle on quit so WAL is checkpointed cleanly. Idempotent. */
+export function closeProactiveDb(): void {
+  if (db) {
+    db.close()
+    db = null
+  }
+}
+
 function rowToInsight(r: Record<string, unknown>): Insight {
   return {
     id: r.id as number,

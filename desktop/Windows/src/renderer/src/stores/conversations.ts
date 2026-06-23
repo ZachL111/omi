@@ -117,6 +117,9 @@ let unsubEvents: (() => void) | null = null
 // Live notes: generate a short note every ~50 new transcript words (LiveNotesMonitor.swift).
 let liveNotesCursor = 0
 let liveNotesBusy = false
+// Bumped on every start()/stop() so a note generation that resolves after the user
+// switched recordings is discarded instead of leaking into the new session.
+let liveNotesGen = 0
 async function maybeGenerateNote(): Promise<void> {
   if (liveNotesBusy) return
   const segs = useLive.getState().segments
@@ -124,6 +127,7 @@ async function maybeGenerateNote(): Promise<void> {
   const words = fullText.split(/\s+/).filter(Boolean)
   if (words.length - liveNotesCursor < 50) return
   liveNotesBusy = true
+  const gen = liveNotesGen
   const excerpt = words.slice(Math.max(0, words.length - 120)).join(' ')
   liveNotesCursor = words.length
   try {
@@ -140,7 +144,8 @@ async function maybeGenerateNote(): Promise<void> {
       'claude-haiku-4-5-20251001'
     )
     const clean = note.trim().replace(/^["'-\s]+|["'\s]+$/g, '')
-    if (clean) useLive.setState({ notes: [...useLive.getState().notes, clean] })
+    // Only attach the note if the recording that triggered it is still active.
+    if (clean && gen === liveNotesGen) useLive.setState({ notes: [...useLive.getState().notes, clean] })
   } catch {
     // best-effort
   } finally {
@@ -160,6 +165,8 @@ export const useLive = create<LiveStore>((set, get) => ({
     if (get().status !== 'idle') return
     set({ status: 'connecting', segments: [], notes: [], statusDetail: null })
     liveNotesCursor = 0
+    liveNotesGen++
+    liveNotesBusy = false
 
     unsubEvents?.()
     unsubEvents = window.omi.transcribe.onEvent('conversation', (event) => {
@@ -207,6 +214,9 @@ export const useLive = create<LiveStore>((set, get) => ({
   },
   stop: async () => {
     if (get().status === 'idle') return
+    // Invalidate any in-flight live-note generation from this recording.
+    liveNotesGen++
+    liveNotesBusy = false
     set({ status: 'stopping' })
     capture?.stop()
     capture = null

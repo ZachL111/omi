@@ -25,6 +25,7 @@ const PROMPT =
 
 let timer: NodeJS.Timeout | null = null
 let monitoring = false
+let stopped = false
 let lastStatus: 'focused' | 'distracted' | null = null
 let lastApp: string | null = null
 let lastError: string | null = null
@@ -39,7 +40,9 @@ function broadcast(): void {
     currentApp: lastApp,
     lastError
   }
-  for (const wc of webContents.getAllWebContents()) wc.send('focus:status', status)
+  for (const wc of webContents.getAllWebContents()) {
+    if (!wc.isDestroyed()) wc.send('focus:status', status)
+  }
 }
 
 function parseJson(body: string): { status?: string; app_or_site?: string; description?: string; message?: string } | null {
@@ -123,6 +126,7 @@ async function runOnce(): Promise<void> {
 
 function schedule(): void {
   if (timer) clearTimeout(timer)
+  if (stopped) return
   if (!settings.get().focusEnabled) {
     monitoring = false
     broadcast()
@@ -134,6 +138,17 @@ function schedule(): void {
     await runOnce()
     schedule()
   }, Math.max(30000, settings.get().focusAnalysisDelayMs))
+}
+
+// Stop the engine on app quit: clear the timer so no analysis cycle fires during
+// shutdown. Idempotent.
+export function stopFocusEngine(): void {
+  stopped = true
+  if (timer) {
+    clearTimeout(timer)
+    timer = null
+  }
+  monitoring = false
 }
 
 export function startFocusEngine(): void {

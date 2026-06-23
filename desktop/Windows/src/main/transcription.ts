@@ -29,6 +29,7 @@ class TranscriptionBridge {
   private reconnects = 0
   private reconnectTimer: NodeJS.Timeout | null = null
   private language = 'en'
+  private gen = 0 // bumped on every start/teardown so a superseded async connect can bail
 
   private emit(event: TranscribeEvent): void {
     if (this.sender && !this.sender.isDestroyed()) this.sender.send(this.channel, event)
@@ -37,9 +38,9 @@ class TranscriptionBridge {
   private socketUrl(base: string): string {
     const ws = base.replace(/^http/, 'ws')
     return this.mode === 'conversation'
-      ? `${ws}v4/listen?language=${this.language}&sample_rate=16000&codec=pcm16&channels=1` +
+      ? `${ws}v4/listen?language=${encodeURIComponent(this.language)}&sample_rate=16000&codec=pcm16&channels=1` +
           `&include_speech_profile=true&source=desktop&speaker_auto_assign=enabled`
-      : `${ws}v2/voice-message/transcribe-stream?language=${this.language}&sample_rate=16000&encoding=linear16&channels=1`
+      : `${ws}v2/voice-message/transcribe-stream?language=${encodeURIComponent(this.language)}&sample_rate=16000&encoding=linear16&channels=1`
   }
 
   async start(sender: WebContents, channel: string, mode: Mode, language?: string): Promise<boolean> {
@@ -55,14 +56,18 @@ class TranscriptionBridge {
   }
 
   private async connect(): Promise<boolean> {
+    const myGen = this.gen
     const token = await getValidToken()
     if (!token) {
       this.emit({ type: 'status', status: 'error', detail: 'not signed in' })
       this.active = false
       return false
     }
+    // A stop() or a newer start() during the token await supersedes this connect.
+    // Bail before creating a socket so we never leak an orphaned OPEN connection.
+    if (this.gen !== myGen || !this.active) return false
 
-    const url = this.socketUrl(pythonBaseURL(settings.get().pythonApiUrl))
+    const url = this.socketUrl(pythonBaseURL())
     this.emit({ type: 'status', status: 'connecting' })
     const ws = new WebSocket(url, { headers: { Authorization: `Bearer ${token}` } })
     this.ws = ws
@@ -115,7 +120,7 @@ class TranscriptionBridge {
 
   private handleDrop(): void {
     if (!this.active) return // user-initiated stop
-    // PTT is a single short turn — don't reconnect, just report closed.
+    // PTT is a single short turn, don't reconnect, just report closed.
     if (this.mode === 'ptt') {
       this.active = false
       this.emit({ type: 'status', status: 'closed' })
@@ -153,6 +158,7 @@ class TranscriptionBridge {
   /** Tear down the socket. emitClosed=false during a fresh start (no stale event). */
   private teardown(emitClosed: boolean): void {
     const had = this.active || this.ws !== null
+    this.gen++
     this.active = false
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)

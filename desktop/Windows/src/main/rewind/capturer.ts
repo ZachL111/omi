@@ -17,6 +17,7 @@ let timer: NodeJS.Timeout | null = null
 let lastHash: bigint | null = null
 let capturing = false
 let lastPrune = 0
+let stopped = false
 
 function day(ts: number): string {
   const d = new Date(ts)
@@ -28,7 +29,9 @@ function day(ts: number): string {
 function broadcastStatus(): void {
   const s = stats()
   const payload = { ...s, ocrPending: ocrService.pending, capturing }
-  for (const wc of webContents.getAllWebContents()) wc.send('rewind:status', payload)
+  for (const wc of webContents.getAllWebContents()) {
+    if (!wc.isDestroyed()) wc.send('rewind:status', payload)
+  }
 }
 
 async function captureOnce(): Promise<void> {
@@ -75,6 +78,7 @@ async function captureOnce(): Promise<void> {
 
 function loop(): void {
   if (timer) clearTimeout(timer)
+  if (stopped) return
   const s = settings.get()
   if (!s.rewindEnabled) {
     capturing = false
@@ -83,6 +87,7 @@ function loop(): void {
   }
   capturing = true
   timer = setTimeout(async () => {
+    if (stopped) return
     try {
       await captureOnce()
     } catch (e) {
@@ -101,6 +106,17 @@ export function startRewindEngine(): void {
 
 export function isCapturing(): boolean {
   return capturing
+}
+
+// Stop the capture loop on app quit so no screenshots, JPEG encodes, or DB writes
+// fire during shutdown. Idempotent.
+export function stopRewindEngine(): void {
+  stopped = true
+  if (timer) {
+    clearTimeout(timer)
+    timer = null
+  }
+  capturing = false
 }
 
 export function getRewindStatus(): ReturnType<typeof stats> & { ocrPending: number; capturing: boolean } {

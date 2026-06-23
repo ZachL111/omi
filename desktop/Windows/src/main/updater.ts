@@ -67,6 +67,7 @@ function wire(): void {
       .then((r) => {
         if (r.response === 0) autoUpdater.quitAndInstall()
       })
+      .catch(() => {})
   })
   autoUpdater.on('error', (err) => {
     state = { status: 'error', error: String(err) }
@@ -104,8 +105,20 @@ export function getUpdateState(): UpdateState {
   return state
 }
 
+let startupTimer: NodeJS.Timeout | null = null
+
 /** Check shortly after launch (non-blocking), like Sparkle's auto-check. */
 export function scheduleStartupCheck(): void {
   if (!app.isPackaged) return
-  setTimeout(() => void checkForUpdates(false), 8000)
+  startupTimer = setTimeout(() => {
+    startupTimer = null
+    void checkForUpdates(false)
+  }, 8000)
+  // Don't fire a deferred update check into a tearing-down app.
+  app.once('will-quit', () => {
+    if (startupTimer) {
+      clearTimeout(startupTimer)
+      startupTimer = null
+    }
+  })
 }

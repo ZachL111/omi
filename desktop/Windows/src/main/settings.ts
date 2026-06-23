@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { readFileSync, writeFileSync, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, renameSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { EventEmitter } from 'events'
 import type { AppSettings } from '../shared/types'
@@ -60,7 +60,11 @@ class SettingsStore extends EventEmitter {
     this.data = { ...this.data, ...partial }
     try {
       mkdirSync(app.getPath('userData'), { recursive: true })
-      writeFileSync(this.file, JSON.stringify(this.data, null, 2))
+      // Atomic write: a crash mid-write must not truncate settings.json (which would
+      // reset all settings to defaults on next launch).
+      const tmp = this.file + '.tmp'
+      writeFileSync(tmp, JSON.stringify(this.data, null, 2))
+      renameSync(tmp, this.file)
     } catch (e) {
       console.error('settings: persist failed', e)
     }

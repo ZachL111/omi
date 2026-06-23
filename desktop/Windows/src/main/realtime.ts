@@ -16,6 +16,11 @@ const MODELS: Record<Provider, string> = {
   openai: 'gpt-realtime-2'
 }
 
+// Cap the pre-open send queue so a relay that never reaches 'open' (server down or a
+// slow/hung handshake) while the renderer keeps streaming audio cannot grow main
+// process memory without bound. Mirrors transcription's MAX_QUEUED_FRAMES.
+const MAX_PENDING = 500
+
 function resolveProvider(): Provider {
   const p = settings.get().realtimeProvider
   return p === 'openai' ? 'openai' : 'gemini' // 'auto' -> gemini (default pick)
@@ -27,6 +32,7 @@ class RealtimeBridge {
   private provider: Provider = 'gemini'
   private open = false
   private pending: string[] = []
+  private gen = 0 // bumped on stop so a superseded async start can bail
 
   inputRate(): number {
     return this.provider === 'openai' ? 24000 : 16000
@@ -39,17 +45,24 @@ class RealtimeBridge {
   private sendJson(obj: unknown): void {
     const s = JSON.stringify(obj)
     if (this.ws && this.open) this.ws.send(s)
-    else this.pending.push(s)
+    else {
+      if (this.pending.length >= MAX_PENDING) this.pending.shift()
+      this.pending.push(s)
+    }
   }
 
   async start(sender: WebContents): Promise<{ ok: boolean; inputRate: number; provider: Provider } | { ok: false }> {
     this.stop()
+    const myGen = this.gen
     this.sender = sender
     this.provider = resolveProvider()
     const token = await getValidToken()
     if (!token) return { ok: false }
+    // A stop() or newer start() during the token await supersedes this one; bail
+    // before creating a socket so we don't leak an orphaned OPEN connection.
+    if (this.gen !== myGen) return { ok: false }
 
-    const base = pythonBaseURL(settings.get().pythonApiUrl).replace(/^http/, 'ws')
+    const base = pythonBaseURL().replace(/^http/, 'ws')
     const url = `${base}v1/omni/relay?provider=${this.provider}&model=${encodeURIComponent(MODELS[this.provider])}`
     const ws = new WebSocket(url, { headers: { Authorization: `Bearer ${token}` } })
     this.ws = ws
@@ -69,7 +82,13 @@ class RealtimeBridge {
       this.ws = null
       this.emit({ type: 'status', status: 'closed' })
     })
-    ws.on('error', (err) => this.emit({ type: 'status', status: 'error', detail: String(err) }))
+    ws.on('error', (err) => {
+      // Clear state so later sendJson calls re-queue instead of writing to a dead
+      // or half-open socket. A 'close' usually follows and is idempotent here.
+      this.open = false
+      this.ws = null
+      this.emit({ type: 'status', status: 'error', detail: String(err) })
+    })
     return { ok: true, inputRate: this.inputRate(), provider: this.provider }
   }
 
@@ -151,6 +170,7 @@ class RealtimeBridge {
   }
 
   stop(): void {
+    this.gen++
     this.open = false
     this.pending = []
     if (this.ws) {
