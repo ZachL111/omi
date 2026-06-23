@@ -46,7 +46,7 @@ export function Onboarding() {
             <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Welcome to Omi</div>
             <div style={{ fontSize: 14, color: 'var(--text-tertiary)', lineHeight: 1.6, marginBottom: 24 }}>
               Your AI that sees your screen, listens to your conversations, remembers what matters, and helps you get
-              things done — now on Windows.
+              things done, now on Windows.
             </div>
             <button className="btn-primary" style={{ width: '100%' }} onClick={next}>
               Get started

@@ -175,7 +175,7 @@ export function ChatPage() {
         {chat.messages.length === 0 ? (
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
             <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-tertiary)' }}>
-              Ask Omi anything — it knows your context
+              Ask Omi anything, it knows your context
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 480 }}>
               {SUGGESTIONS.map((s) => (

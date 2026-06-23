@@ -123,7 +123,7 @@ export function ConversationsPage() {
                   />
                   <span style={{ fontSize: 11.5, color: 'var(--text-quaternary)' }}>
                     {live.status === 'recording'
-                      ? `Listening — ${live.segments.length} segment${live.segments.length === 1 ? '' : 's'}`
+                      ? `Listening, ${live.segments.length} segment${live.segments.length === 1 ? '' : 's'}`
                       : 'Connecting to transcription…'}
                   </span>
                 </div>
@@ -285,7 +285,7 @@ export function ConversationsPage() {
             )
           })}
           {!store.loading && store.items.length === 0 && (
-            <EmptyState title="No conversations yet" subtitle="Hit Start Recording — Omi will transcribe, summarize and remember it." />
+            <EmptyState title="No conversations yet" subtitle="Hit Start Recording, Omi will transcribe, summarize and remember it." />
           )}
         </div>
       </div>
@@ -318,7 +318,7 @@ function LiveDetail() {
     <div style={{ padding: '46px 26px 26px' }}>
       <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Live conversation</div>
       <div style={{ fontSize: 12.5, color: 'var(--text-quaternary)', marginBottom: 18 }}>
-        Transcribing in real time — speakers are identified automatically
+        Transcribing in real time, speakers are identified automatically
       </div>
       {live.notes.length > 0 && (
         <div className="section" style={{ padding: 14, marginBottom: 18 }}>

@@ -1,5 +1,5 @@
 // Microphone (+ optional WASAPI loopback system audio) capture, downsampled to
-// 16 kHz mono PCM16 — the renderer half of the Mac AudioSourceManager pipeline.
+// 16 kHz mono PCM16, the renderer half of the Mac AudioSourceManager pipeline.
 
 export interface PcmCaptureOptions {
   systemAudio: boolean

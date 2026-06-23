@@ -1,7 +1,7 @@
 {
   "name": "omi-windows",
   "version": "0.1.0",
-  "description": "Omi desktop app for Windows — port of the macOS app (desktop/Desktop)",
+  "description": "Omi desktop app for Windows: port of the macOS app (desktop/Desktop)",
   "main": "out/main/index.js",
   "author": "Based Hardware",
   "license": "MIT",

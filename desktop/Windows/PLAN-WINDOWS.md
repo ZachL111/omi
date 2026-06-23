@@ -1,4 +1,4 @@
-# Omi for Windows — Port Plan (Track 1: Windows App)
+# Omi for Windows - Port Plan (Track 1: Windows App)
 
 Goal: a Windows desktop app that is as close as possible to the macOS Swift app
 (`desktop/Desktop`), talking to the same production backends, with as many Mac
@@ -13,7 +13,7 @@ features working as possible.
   SSE/WebSocket streaming from the main process (Node `ws` can send the same
   `Authorization` headers the Swift app sends via URLSession).
 - Local data: `better-sqlite3` (FTS5) mirroring GRDB usage on Mac.
-- OCR: Windows.Media.Ocr (WinRT) via a persistent PowerShell sidecar — native Windows
+- OCR: Windows.Media.Ocr (WinRT) via a persistent PowerShell sidecar - native Windows
   counterpart of Apple Vision.
 
 ## Backends (same as Mac app)

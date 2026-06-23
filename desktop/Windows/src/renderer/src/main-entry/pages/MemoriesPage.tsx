@@ -30,7 +30,7 @@ export function MemoriesPage() {
         <div>
           <div style={{ fontSize: 19, fontWeight: 700 }}>Memories</div>
           <div style={{ fontSize: 12.5, color: 'var(--text-quaternary)', marginTop: 2 }}>
-            Everything Omi knows about you — editable, deletable, yours
+            Everything Omi knows about you, editable, deletable, yours
           </div>
         </div>
         {store.loading && <Spinner size={15} />}

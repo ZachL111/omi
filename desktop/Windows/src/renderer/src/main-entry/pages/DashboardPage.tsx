@@ -135,7 +135,7 @@ export function DashboardPage({ onNavigate }: { onNavigate: (p: Page) => void })
         <DashCard title="Goals">
           {goals.length === 0 ? (
             <div style={{ color: 'var(--text-quaternary)', fontSize: 13, padding: '14px 0' }}>
-              No goals yet — create them from chat.
+              No goals yet, create them from chat.
             </div>
           ) : (
             goals.slice(0, 4).map((g) => {

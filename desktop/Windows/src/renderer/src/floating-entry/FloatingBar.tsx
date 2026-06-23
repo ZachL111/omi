@@ -323,7 +323,7 @@ export function FloatingBar() {
               </div>
             )}
             {!userTranscript && !aiTranscript && voiceStatus === 'live' && (
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Speak — pause and tap Done to get a reply.</div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Speak, pause and tap Done to get a reply.</div>
             )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -399,7 +399,7 @@ export function FloatingBar() {
               <>
                 <Waveform level={level} />
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {interim || 'Speak now — release mic to send'}
+                  {interim || 'Speak now, release mic to send'}
                 </span>
               </>
             ) : (

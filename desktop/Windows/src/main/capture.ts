@@ -46,7 +46,7 @@ export function installLoopbackAudioHandler(): void {
   session.defaultSession.setDisplayMediaRequestHandler(
     (_request, callback) => {
       if (Date.now() > captureArmedUntil) {
-        // Not an app-initiated capture — deny.
+        // Not an app-initiated capture, deny.
         callback({})
         return
       }

@@ -4,7 +4,7 @@ import { EmptyState, Spinner } from '../../components/ui'
 import { useAuth } from '../../stores/auth'
 import type { KnowledgeGraphEdge, KnowledgeGraphNode } from '../../api/types'
 
-// Knowledge graph — 2D force-directed layout. The Mac app renders this in 3D
+// Knowledge graph, 2D force-directed layout. The Mac app renders this in 3D
 // (SceneKit); node-type colors match MemoryGraphPage.swift.
 // macOS dark-mode system colors, matching MemoryGraphPage.swift node types.
 const TYPE_COLOR: Record<string, string> = {

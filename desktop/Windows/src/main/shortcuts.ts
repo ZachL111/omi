@@ -2,7 +2,7 @@ import { globalShortcut } from 'electron'
 import { settings } from './settings'
 import { createFloatingBar, getFloatingBar } from './windows'
 
-// Equivalent of GlobalShortcutManager.swift — the Ask Omi hotkey toggles the
+// Equivalent of GlobalShortcutManager.swift, the Ask Omi hotkey toggles the
 // floating bar's input state (FloatingControlBarManager.toggleAIInput()).
 
 let registered: string | null = null

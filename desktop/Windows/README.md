@@ -5,7 +5,7 @@ Omi Summer "Track 1: Windows App" challenge. It looks like the Swift app, talks 
 the same production backends, and brings over as many features as a Windows build
 can reasonably support.
 
-> Stack: Electron 38 + TypeScript + React 18 (electron-vite). No backend changes —
+> Stack: Electron 38 + TypeScript + React 18 (electron-vite). No backend changes -
 > it uses the same `api.omi.me` Python backend and the same Cloud Run desktop
 > backend the Mac app uses, with the same Firebase auth.
 
@@ -33,42 +33,42 @@ Floating "Ask omi" bar (collapsed pill → hover bar → ask input):
 
 Everything below is wired to the same endpoints as the Mac app.
 
-- **Sign in** with Google or Apple — system-browser OAuth via `/v1/auth/authorize`,
+- **Sign in** with Google or Apple - system-browser OAuth via `/v1/auth/authorize`,
   custom-token exchange, Firebase ID token + refresh. Returns to the app through the
   `omi-computer://` protocol (same scheme the Mac app registers).
-- **Floating control bar** — frameless, always-on-top, draggable, position persisted.
+- **Floating control bar** - frameless, always-on-top, draggable, position persisted.
   Collapsed pill → hover bar ("Ask omi" / "Push to talk") → ask input → streaming AI
   conversation. Global hotkey (`Ctrl+Shift+Space`, configurable) toggles it from
   anywhere.
 - **Chat** with streaming responses from `/v2/chat/completions` (the OpenAI-compatible
   Anthropic proxy, `claude-sonnet-4-6`), markdown rendering, session history.
-- **"What do you see?"** — attaches a screenshot (and recent screen OCR text) to the
+- **"What do you see?"** - attaches a screenshot (and recent screen OCR text) to the
   chat so Omi can answer about your screen.
-- **Push-to-talk voice** — mic → `/v2/voice-message/transcribe-stream`, transcript
+- **Push-to-talk voice** - mic → `/v2/voice-message/transcribe-stream`, transcript
   drops into the ask box.
-- **Live conversations** — mic + system audio (WASAPI loopback) → `/v4/listen`
+- **Live conversations** - mic + system audio (WASAPI loopback) → `/v4/listen`
   (16 kHz mono PCM16), live speaker-labelled transcript, conversation saved on stop.
-- **Conversations** — list, search, detail (summary, action items, transcript),
+- **Conversations** - list, search, detail (summary, action items, transcript),
   star, rename, delete.
-- **Memories** — list with the Manual / About You / Insights / Workflow filters, add,
+- **Memories** - list with the Manual / About You / Insights / Workflow filters, add,
   edit, delete (`/v3/memories`).
-- **Tasks** — overdue / today / upcoming / no-due grouping, complete, add, delete
+- **Tasks** - overdue / today / upcoming / no-due grouping, complete, add, delete
   (`/v1/action-items`).
-- **Dashboard** — greeting, today's tasks, recent conversations, goals, memory count.
-- **Rewind (Windows-native)** — captures the screen every 3s, dedupes with a 9×8
+- **Dashboard** - greeting, today's tasks, recent conversations, goals, memory count.
+- **Rewind (Windows-native)** - captures the screen every 3s, dedupes with a 9×8
   dHash (≤5-bit Hamming = same screen), OCRs each frame with the built-in
   **Windows.Media.Ocr** engine, indexes the text in SQLite FTS5, and gives you a
   searchable timeline. Everything stays local.
-- **Proactive assistant** — when enabled, periodically reads recent screen OCR text
+- **Proactive assistant** - when enabled, periodically reads recent screen OCR text
   (the same on-device capture as Rewind), asks the LLM to extract durable memories,
   action items, and at most one useful nudge; memories/tasks sync to your account,
   and nudges appear on the **Insights** page and as a floating-bar notification card.
-- **Apps** — MCP key creation (`/v1/mcp/keys`) to connect Omi memories to Claude /
+- **Apps** - MCP key creation (`/v1/mcp/keys`) to connect Omi memories to Claude /
   ChatGPT, plus links to mobile, Discord, marketplace.
-- **Settings** — General (hotkey, floating bar, launch-at-login, font scale), Rewind
+- **Settings** - General (hotkey, floating bar, launch-at-login, font scale), Rewind
   (capture interval, retention, storage), Transcription (language), Account, Advanced
   (bring-your-own-keys via `X-BYOK-*` headers, backend URL overrides), About.
-- **Tray** — mirrors the macOS menu-bar item (show/hide bar, screen capture toggle,
+- **Tray** - mirrors the macOS menu-bar item (show/hide bar, screen capture toggle,
   open, settings, rewind, check for updates, quit). Tray-resident: closing the main
   window keeps Omi running.
 

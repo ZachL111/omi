@@ -61,7 +61,7 @@ export function InsightsPage() {
             )}
           </div>
           <div style={{ fontSize: 12.5, color: 'var(--text-quaternary)', marginTop: 2 }}>
-            Omi watches your screen and surfaces what matters — memories and tasks are filed automatically
+            Omi watches your screen and surfaces what matters, memories and tasks are filed automatically
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

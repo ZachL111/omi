@@ -34,7 +34,7 @@ export function AppsPage() {
     },
     {
       title: 'Omi Mobile App',
-      desc: 'Capture conversations on the go — same account, same memory.',
+      desc: 'Capture conversations on the go, same account, same memory.',
       action: 'Get the app',
       onClick: () => window.omi.system.openExternal('https://www.omi.me')
     },
@@ -52,7 +52,7 @@ export function AppsPage() {
         setIndexing(true)
         const r = await window.omi.files.index()
         setIndexing(false)
-        window.alert(r.ok ? 'Indexed — added a summary memory about your files.' : `Could not index: ${r.error}`)
+        window.alert(r.ok ? 'Indexed, added a summary memory about your files.' : `Could not index: ${r.error}`)
       }
     },
     {
@@ -79,7 +79,7 @@ export function AppsPage() {
       {mcpKey && (
         <div className="section" style={{ padding: 14, marginBottom: 16, borderColor: 'rgba(16,185,129,0.45)' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--success)', marginBottom: 6 }}>
-            MCP key created — copy it now, it won't be shown again
+            MCP key created, copy it now, it won't be shown again
           </div>
           <code
             className="text-selectable"

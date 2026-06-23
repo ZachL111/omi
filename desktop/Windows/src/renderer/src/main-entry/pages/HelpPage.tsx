@@ -14,7 +14,7 @@ export function HelpPage() {
           <li>
             Press <b style={{ color: 'var(--text-secondary)' }}>{hotkey}</b> anywhere to ask Omi from the floating bar.
           </li>
-          <li>Start a recording on the Conversations page — Omi transcribes, summarizes and extracts tasks.</li>
+          <li>Start a recording on the Conversations page, Omi transcribes, summarizes and extracts tasks.</li>
           <li>Turn on Rewind to make everything you see searchable.</li>
           <li>Ctrl+1…8 switch pages, like Cmd+1…6 on the Mac app.</li>
         </ul>

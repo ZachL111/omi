@@ -1,6 +1,6 @@
 import { CHAT_MODEL } from './model'
 
-// Streaming chat against the Rust desktop backend's /v2/chat/completions —
+// Streaming chat against the Rust desktop backend's /v2/chat/completions, 
 // the same OpenAI-compatible Anthropic proxy ChatProvider.swift uses
 // (model claude-sonnet-4-6, SSE stream).
 
@@ -88,7 +88,7 @@ export function buildSystemPrompt(userName?: string): string {
   })
   return (
     `You are Omi, the user's personal AI that remembers their life and helps them get things done. ` +
-    `You run inside the Omi desktop app for Windows. Be concise, warm, and direct — answer first, detail after. ` +
+    `You run inside the Omi desktop app for Windows. Be concise, warm, and direct, answer first, detail after. ` +
     (userName ? `The user's name is ${userName}. ` : '') +
     `Current local time: ${now}. ` +
     `When the user asks about their screen and a screenshot or screen text is attached, ground your answer in it.`

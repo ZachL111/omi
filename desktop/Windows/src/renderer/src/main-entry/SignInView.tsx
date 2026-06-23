@@ -26,7 +26,7 @@ export function SignInView() {
       <img src={herologo} width={64} height={64} style={{ borderRadius: 16, marginBottom: 6 }} alt="omi" />
       <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5 }}>omi</div>
       <div style={{ fontSize: 14, color: 'var(--text-tertiary)', marginBottom: 18 }}>
-        Your AI that sees, listens, and remembers — now on Windows.
+        Your AI that sees, listens, and remembers, now on Windows.
       </div>
 
       <button

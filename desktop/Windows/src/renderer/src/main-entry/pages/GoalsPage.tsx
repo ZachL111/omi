@@ -18,7 +18,7 @@ export function GoalsPage() {
         <div>
           <div style={{ fontSize: 19, fontWeight: 700 }}>Goals</div>
           <div style={{ fontSize: 12.5, color: 'var(--text-quaternary)', marginTop: 2 }}>
-            Track what you're working toward — drag a bar to update progress
+            Track what you're working toward, drag a bar to update progress
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
