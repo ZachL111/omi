@@ -1,9 +1,9 @@
 import { app, safeStorage, shell, webContents } from 'electron'
 import { randomUUID } from 'crypto'
-import { readFileSync, writeFileSync, rmSync, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, rmSync, mkdirSync, renameSync } from 'fs'
 import { join } from 'path'
 import { pythonBaseURL, FIREBASE_API_KEY, AUTH_REDIRECT_URI } from './env'
-import { settings } from './settings'
+import { clearByokCache } from './secrets'
 import type { AuthState } from '../shared/types'
 
 // Same flow as AuthService.swift: browser OAuth via the Python backend, custom-token
@@ -22,9 +22,13 @@ interface StoredAuth {
 let stored: StoredAuth | null = null
 let pendingState: string | null = null
 let refreshInFlight: Promise<string | null> | null = null
+let authGen = 0 // bumped on sign-out so an in-flight refresh cannot resurrect the session
 
 const authFile = () => join(app.getPath('userData'), 'auth.bin')
 
+// Decodes the JWT payload WITHOUT verifying the signature. Used only for display
+// fields (email/name) from Google-origin tokens, never for an auth decision: the
+// session uid comes from the Firebase-issued idToken, re-verified server-side.
 function decodeJwt(jwt: string): Record<string, any> | null {
   const parts = jwt.split('.')
   if (parts.length < 2) return null
@@ -43,30 +47,32 @@ function persist(): void {
     } catch {}
     return
   }
-  const plain = JSON.stringify(stored)
-  mkdirSync(app.getPath('userData'), { recursive: true })
-  if (safeStorage.isEncryptionAvailable()) {
-    writeFileSync(authFile(), safeStorage.encryptString(plain))
-  } else {
-    // DPAPI is effectively always available on Windows 10+; this path is a rare
-    // fallback. Tag the blob so restore knows it's not encrypted, and warn.
-    console.warn('auth: OS encryption unavailable — storing tokens unencrypted')
-    writeFileSync(authFile(), Buffer.concat([Buffer.from('PLAIN:', 'utf8'), Buffer.from(plain, 'utf8')]))
+  // Fail closed: the blob holds the long-lived refresh token, so it must never be
+  // written to disk unencrypted. DPAPI is effectively always available on Windows
+  // 10+; if it somehow is not, keep the session in memory only and clear any file.
+  if (!safeStorage.isEncryptionAvailable()) {
+    console.warn('auth: OS encryption unavailable, keeping tokens in memory only this session')
+    try {
+      rmSync(authFile(), { force: true })
+    } catch {}
+    return
   }
+  mkdirSync(app.getPath('userData'), { recursive: true })
+  const tmp = authFile() + '.tmp'
+  writeFileSync(tmp, safeStorage.encryptString(JSON.stringify(stored)))
+  renameSync(tmp, authFile())
 }
 
 export function restoreAuth(): void {
   try {
     const raw = readFileSync(authFile())
-    let plain: string
-    if (raw.subarray(0, 6).toString('utf8') === 'PLAIN:') {
-      plain = raw.subarray(6).toString('utf8') // unencrypted fallback blob
-    } else if (safeStorage.isEncryptionAvailable()) {
-      plain = safeStorage.decryptString(raw)
-    } else {
-      plain = raw.toString('utf8') // legacy untagged plaintext
+    // Only trust OS-encrypted blobs. A plaintext file (from an older build or a
+    // tampered profile) is not trusted; the user simply signs in again.
+    if (!safeStorage.isEncryptionAvailable()) {
+      stored = null
+      return
     }
-    stored = JSON.parse(plain)
+    stored = JSON.parse(safeStorage.decryptString(raw))
   } catch {
     stored = null
   }
@@ -91,7 +97,7 @@ function broadcast(): void {
 
 export function startSignIn(provider: 'google' | 'apple'): void {
   pendingState = randomUUID()
-  const base = pythonBaseURL(settings.get().pythonApiUrl)
+  const base = pythonBaseURL()
   const url =
     `${base}v1/auth/authorize?provider=${provider}` +
     `&redirect_uri=${encodeURIComponent(AUTH_REDIRECT_URI)}` +
@@ -115,7 +121,7 @@ export async function handleAuthCallback(callbackUrl: string): Promise<boolean> 
   }
   pendingState = null
 
-  const base = pythonBaseURL(settings.get().pythonApiUrl)
+  const base = pythonBaseURL()
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
@@ -180,12 +186,16 @@ export async function handleAuthCallback(callbackUrl: string): Promise<boolean> 
 
 async function refreshToken(): Promise<string | null> {
   if (!stored) return null
+  const myGen = authGen
   const body = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: stored.refreshToken })
   const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString()
   })
+  // A sign-out (or other reset) during the request supersedes this refresh. Never
+  // write tokens back over a session the user just signed out of.
+  if (authGen !== myGen) return null
   if (!res.ok) {
     console.error('auth: refresh failed', res.status)
     if (res.status === 400) {
@@ -196,6 +206,7 @@ async function refreshToken(): Promise<string | null> {
     return null
   }
   const json = (await res.json()) as { id_token: string; refresh_token: string; expires_in: string }
+  if (authGen !== myGen || !stored) return null
   stored = {
     ...stored,
     idToken: json.id_token,
@@ -229,7 +240,9 @@ export async function forceRefreshToken(): Promise<string | null> {
 }
 
 export function signOut(): void {
+  authGen++
   stored = null
   persist()
   broadcast()
+  clearByokCache()
 }

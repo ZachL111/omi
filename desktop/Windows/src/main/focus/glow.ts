@@ -8,6 +8,8 @@ import { join } from 'path'
 
 let overlay: BrowserWindow | null = null
 let hideTimer: NodeJS.Timeout | null = null
+let pendingSend = false
+let pendingStatus: 'focused' | 'distracted' = 'focused'
 
 const DEV_URL = process.env['ELECTRON_RENDERER_URL']
 
@@ -35,13 +37,17 @@ function ensureOverlay(): BrowserWindow {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
       backgroundThrottling: false
     }
   })
   overlay.setIgnoreMouseEvents(true)
   overlay.setAlwaysOnTop(true, 'screen-saver')
   overlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  // Same navigation lockdown as the other windows: the glow overlay exposes the
+  // preload bridge, so deny window.open and any in-page navigation (it has none).
+  overlay.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  overlay.webContents.on('will-navigate', (e) => e.preventDefault())
   if (DEV_URL) overlay.loadURL(`${DEV_URL}/glow.html`)
   else overlay.loadFile(join(__dirname, '../renderer/glow.html'))
   overlay.on('closed', () => {
@@ -55,9 +61,20 @@ export function flashGlow(status: 'focused' | 'distracted'): void {
   const win = ensureOverlay()
   const display = screen.getPrimaryDisplay()
   win.setBounds(display.bounds)
-  const send = () => win.webContents.send('glow:show', { status })
-  if (win.webContents.isLoading()) win.webContents.once('did-finish-load', send)
-  else send()
+  pendingStatus = status
+  if (win.webContents.isLoading()) {
+    // Queue at most one load listener; rapid early flashes must not stack handlers
+    // that each fire a glow:show. The single handler sends the latest status.
+    if (!pendingSend) {
+      pendingSend = true
+      win.webContents.once('did-finish-load', () => {
+        pendingSend = false
+        if (overlay && !overlay.isDestroyed()) overlay.webContents.send('glow:show', { status: pendingStatus })
+      })
+    }
+  } else {
+    win.webContents.send('glow:show', { status })
+  }
   win.showInactive()
   if (hideTimer) clearTimeout(hideTimer)
   hideTimer = setTimeout(() => {

@@ -8,6 +8,7 @@ import { settings } from './settings'
 
 let mainWindow: BrowserWindow | null = null
 let floatingBar: BrowserWindow | null = null
+let movePersistTimer: NodeJS.Timeout | null = null
 
 const DEV_URL = process.env['ELECTRON_RENDERER_URL']
 
@@ -17,6 +18,27 @@ function loadRenderer(win: BrowserWindow, page: 'index' | 'floating'): void {
   } else {
     win.loadFile(join(__dirname, `../renderer/${page}.html`))
   }
+}
+
+// Lock navigation: the renderer is a fixed local bundle. Never let in-page navigation
+// (e.g. a markdown link in model output) replace the app shell; cross-origin http(s)
+// opens in the system browser instead. Same-origin (dev server / internal) is allowed.
+function hardenNavigation(win: BrowserWindow): void {
+  win.webContents.on('will-navigate', (e, url) => {
+    const here = win.webContents.getURL()
+    try {
+      if (new URL(url).origin === new URL(here).origin) return
+    } catch {
+      // fall through to deny
+    }
+    e.preventDefault()
+    try {
+      const u = new URL(url)
+      if (u.protocol === 'http:' || u.protocol === 'https:') shell.openExternal(u.toString())
+    } catch {
+      // ignore non-web targets
+    }
+  })
 }
 
 export function getMainWindow(): BrowserWindow | null {
@@ -46,7 +68,7 @@ export function createMainWindow(): BrowserWindow {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
-      sandbox: false
+      sandbox: true
     }
   })
   mainWindow.once('ready-to-show', () => mainWindow?.show())
@@ -54,10 +76,11 @@ export function createMainWindow(): BrowserWindow {
     mainWindow = null
   })
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    // Only ever hand http(s) to the OS — never file://, ms-settings:, etc.
+    // Only ever hand http(s) to the OS, never file://, ms-settings:, etc.
     if (/^https?:\/\//i.test(url)) shell.openExternal(url)
     return { action: 'deny' }
   })
+  hardenNavigation(mainWindow)
   loadRenderer(mainWindow, 'index')
   return mainWindow
 }
@@ -76,7 +99,7 @@ export function createFloatingBar(): BrowserWindow {
   const w = FLOATING_SIZES.bar.width
   const h = FLOATING_SIZES.bar.height
   // Resolve the saved position against whichever display currently contains it,
-  // then clamp — otherwise a position saved on a now-disconnected monitor would
+  // then clamp, otherwise a position saved on a now-disconnected monitor would
   // place the bar off-screen and invisible.
   const savedPos = settings.get().floatingBarPosition
   const anchor = savedPos
@@ -109,20 +132,31 @@ export function createFloatingBar(): BrowserWindow {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
       backgroundThrottling: false
     }
   })
   floatingBar.setAlwaysOnTop(true, 'screen-saver')
   floatingBar.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
   floatingBar.on('moved', () => {
-    if (!floatingBar) return
-    const [px, py] = floatingBar.getPosition()
-    settings.set({ floatingBarPosition: { x: px, y: py } })
+    // Electron fires 'moved' rapidly while dragging. Debounce so we do one settings
+    // write (synchronous disk I/O + a tray rebuild) per drag, not per move tick.
+    if (movePersistTimer) clearTimeout(movePersistTimer)
+    movePersistTimer = setTimeout(() => {
+      movePersistTimer = null
+      if (!floatingBar || floatingBar.isDestroyed()) return
+      const [px, py] = floatingBar.getPosition()
+      settings.set({ floatingBarPosition: { x: px, y: py } })
+    }, 400)
   })
   floatingBar.on('closed', () => {
     floatingBar = null
   })
+  floatingBar.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) shell.openExternal(url)
+    return { action: 'deny' }
+  })
+  hardenNavigation(floatingBar)
   loadRenderer(floatingBar, 'floating')
   floatingBar.once('ready-to-show', () => {
     if (settings.get().floatingBarVisible) floatingBar?.show()
