@@ -1,6 +1,7 @@
 import { createHash } from 'crypto'
 import { apiRequest } from './apiProxy'
 import { settings } from './settings'
+import { getByokKeys } from './secrets'
 
 // Bring-Your-Own-Keys activation. The desktop backend's paywall (paywall.rs) has a
 // BYOK escape hatch: a user enrolled on the "BYOK free plan" with all four provider
@@ -22,12 +23,12 @@ export interface ByokActivateResult {
 }
 
 export async function activateByok(): Promise<ByokActivateResult> {
-  const s = settings.get()
+  const k = getByokKeys()
   const keys: Record<string, string> = {
-    openai: s.byokOpenAI.trim(),
-    anthropic: s.byokAnthropic.trim(),
-    gemini: s.byokGemini.trim(),
-    deepgram: s.byokDeepgram.trim()
+    openai: k.openai.trim(),
+    anthropic: k.anthropic.trim(),
+    gemini: k.gemini.trim(),
+    deepgram: k.deepgram.trim()
   }
   const missing = PROVIDERS.filter((p) => !keys[p])
   if (missing.length) return { ok: false, missing }

@@ -1,6 +1,6 @@
 import { app, ipcMain } from 'electron'
-import { readdirSync, statSync } from 'fs'
-import { join, extname } from 'path'
+import { readdirSync, lstatSync, realpathSync } from 'fs'
+import { join, extname, sep } from 'path'
 import { apiRequest } from './apiProxy'
 import { getAuthState } from './auth'
 
@@ -19,7 +19,7 @@ interface Scan {
   topFolders: string[]
 }
 
-function scanDir(root: string, depth: number, acc: Scan): void {
+function scanDir(base: string, root: string, depth: number, acc: Scan): void {
   if (depth > MAX_DEPTH || acc.files > MAX_ENTRIES) return
   let entries: string[]
   try {
@@ -28,17 +28,27 @@ function scanDir(root: string, depth: number, acc: Scan): void {
     return
   }
   for (const name of entries) {
+    if (acc.files > MAX_ENTRIES) break // re-check inside the loop, not only on entry
     if (name.startsWith('.') || SKIP.has(name)) continue
     const full = join(root, name)
     let st
     try {
-      st = statSync(full)
+      st = lstatSync(full)
     } catch {
       continue
     }
+    if (st.isSymbolicLink()) continue // never follow symlinks
     if (st.isDirectory()) {
+      // Confine traversal: skip junctions/links that resolve outside the scan root.
+      let real: string
+      try {
+        real = realpathSync(full)
+      } catch {
+        continue
+      }
+      if (real !== base && !real.startsWith(base + sep)) continue
       if (depth === 0) acc.topFolders.push(name)
-      scanDir(full, depth + 1, acc)
+      scanDir(base, full, depth + 1, acc)
     } else {
       acc.files++
       const ext = extname(name).toLowerCase() || '(none)'
@@ -52,7 +62,8 @@ export async function indexFiles(): Promise<{ ok: boolean; summary?: string; err
   const acc: Scan = { files: 0, byExt: new Map(), topFolders: [] }
   for (const dir of SCAN_DIRS) {
     try {
-      scanDir(app.getPath(dir.toLowerCase() as 'downloads' | 'documents' | 'desktop'), 0, acc)
+      const rootPath = realpathSync(app.getPath(dir.toLowerCase() as 'downloads' | 'documents' | 'desktop'))
+      scanDir(rootPath, rootPath, 0, acc)
     } catch {
       // folder may not exist
     }

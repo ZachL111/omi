@@ -51,7 +51,10 @@ const api = {
       }
       ipcRenderer.on(channel, handler)
       void ipcRenderer.invoke('api:stream', id, req)
-      return () => ipcRenderer.removeListener(channel, handler)
+      return () => {
+        ipcRenderer.removeListener(channel, handler)
+        ipcRenderer.send('api:stream:cancel', id)
+      }
     }
   },
   settings: {
@@ -139,6 +142,8 @@ const api = {
     }
   },
   byok: {
+    status: (): Promise<{ openai: boolean; anthropic: boolean; gemini: boolean; deepgram: boolean }> =>
+      ipcRenderer.invoke('byok:status'),
     activate: (): Promise<{ ok: boolean; error?: string; missing?: string[] }> => ipcRenderer.invoke('byok:activate'),
     deactivate: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('byok:deactivate')
   },

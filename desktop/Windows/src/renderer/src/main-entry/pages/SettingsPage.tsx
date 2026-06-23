@@ -54,10 +54,16 @@ export function SettingsPage() {
   const [rewindStats, setRewindStats] = useState<{ frames: number; bytes: number } | null>(null)
   const [capturingHotkey, setCapturingHotkey] = useState(false)
   const [byokMsg, setByokMsg] = useState<string | null>(null)
+  // BYOK key fields use a LOCAL draft, not settings[key]: the main process masks the
+  // stored keys to '' on every read/write response, so a controlled input bound to
+  // settings would clear on each keystroke. Configured status comes from byok.status().
+  const [byokDraft, setByokDraft] = useState<Record<string, string>>({})
+  const [byokConfigured, setByokConfigured] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     void window.omi.system.version().then(setVersion)
     void window.omi.rewind.status().then((s) => setRewindStats(s))
+    void window.omi.byok.status().then(setByokConfigured)
   }, [])
 
   useEffect(() => {
@@ -175,7 +181,7 @@ export function SettingsPage() {
                 description="Frames and OCR text are stored locally, never uploaded"
               >
                 <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)' }}>
-                  {rewindStats ? `${rewindStats.frames} frames · ${formatBytes(rewindStats.bytes)}` : '—'}
+                  {rewindStats ? `${rewindStats.frames} frames · ${formatBytes(rewindStats.bytes)}` : ', '}
                 </span>
               </SettingRow>
             </SectionCard>
@@ -286,7 +292,7 @@ export function SettingsPage() {
             <SettingRow label="Current plan" description="Basic includes 1,200 transcription minutes/month">
               <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{settings.byokActive ? 'BYOK (unlimited)' : 'Basic'}</span>
             </SettingRow>
-            <SettingRow label="Upgrade to Unlimited" description="$19/mo or $199/yr — more listening minutes">
+            <SettingRow label="Upgrade to Unlimited" description="$19/mo or $199/yr, more listening minutes">
               <button className="btn-primary" style={{ fontSize: 12.5 }} onClick={() => window.omi.system.openExternal('https://www.omi.me')}>
                 Manage plan
               </button>
@@ -393,7 +399,7 @@ export function SettingsPage() {
             </SettingRow>
             <SettingRow
               label="System audio"
-              description="Default for new recordings — captures meeting audio via Windows loopback"
+              description="Default for new recordings, captures meeting audio via Windows loopback"
             >
               <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)' }}>toggle on the Conversations page</span>
             </SettingRow>
@@ -403,10 +409,10 @@ export function SettingsPage() {
         {section === 'account' && (
           <SectionCard title="Account">
             <SettingRow label="Name">
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{auth?.name || '—'}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{auth?.name || ', '}</span>
             </SettingRow>
             <SettingRow label="Email">
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{auth?.email || '—'}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{auth?.email || ', '}</span>
             </SettingRow>
             <SettingRow label="Plan & usage" description="Subscriptions are managed on omi.me">
               <button className="btn-secondary" style={{ fontSize: 12.5 }} onClick={() => window.omi.system.openExternal('https://www.omi.me')}>
@@ -435,20 +441,34 @@ export function SettingsPage() {
                   ['byokGemini', 'Gemini API key'],
                   ['byokDeepgram', 'Deepgram API key']
                 ] as const
-              ).map(([key, label]) => (
-                <SettingRow key={key} label={label} description="Sent as X-BYOK header, used server-side">
-                  <input
-                    type="password"
-                    placeholder="not set"
-                    value={settings[key]}
-                    onChange={(e) => void update({ [key]: e.target.value } as never)}
-                    style={{ width: 220 }}
-                  />
-                </SettingRow>
-              ))}
+              ).map(([key, label]) => {
+                const provider = key.replace('byok', '').toLowerCase()
+                return (
+                  <SettingRow key={key} label={label} description="Sent as X-BYOK header, used server-side">
+                    <input
+                      type="password"
+                      placeholder={byokConfigured[provider] ? 'configured' : 'not set'}
+                      value={byokDraft[key] ?? ''}
+                      onChange={(e) => setByokDraft((d) => ({ ...d, [key]: e.target.value }))}
+                      onBlur={() => {
+                        const v = (byokDraft[key] ?? '').trim()
+                        if (!v) return
+                        void update({ [key]: v } as never)
+                        setByokDraft((d) => {
+                          const next = { ...d }
+                          delete next[key]
+                          return next
+                        })
+                        void window.omi.byok.status().then(setByokConfigured)
+                      }}
+                      style={{ width: 220 }}
+                    />
+                  </SettingRow>
+                )
+              })}
               <SettingRow
                 label="BYOK free plan"
-                description="Enroll your 4 keys to bypass the subscription — you pay the providers directly"
+                description="Enroll your 4 keys to bypass the subscription, you pay the providers directly"
               >
                 {settings.byokActive ? (
                   <button
@@ -459,7 +479,7 @@ export function SettingsPage() {
                       void useSettings.getState().load()
                     }}
                   >
-                    Active — deactivate
+                    Active, deactivate
                   </button>
                 ) : (
                   <button
@@ -469,7 +489,7 @@ export function SettingsPage() {
                       setByokMsg('Activating…')
                       const r = await window.omi.byok.activate()
                       if (r.ok) {
-                        setByokMsg('Activated — chat is now free (charged to your keys)')
+                        setByokMsg('Activated, chat is now free (charged to your keys)')
                         void useSettings.getState().load()
                       } else if (r.missing?.length) {
                         setByokMsg(`Missing keys: ${r.missing.join(', ')}`)
@@ -498,21 +518,11 @@ export function SettingsPage() {
               </SettingRow>
             </SectionCard>
             <SectionCard title="Backends">
-              <SettingRow label="Python API URL" description="Default: https://api.omi.me/">
-                <input
-                  placeholder="https://api.omi.me/"
-                  value={settings.pythonApiUrl}
-                  onChange={(e) => void update({ pythonApiUrl: e.target.value })}
-                  style={{ width: 260 }}
-                />
-              </SettingRow>
-              <SettingRow label="Desktop backend URL" description="Default: production Cloud Run">
-                <input
-                  placeholder="https://desktop-backend-…run.app/"
-                  value={settings.rustApiUrl}
-                  onChange={(e) => void update({ rustApiUrl: e.target.value })}
-                  style={{ width: 260 }}
-                />
+              <SettingRow
+                label="Backend URLs"
+                description="Production by default. Override only via the OMI_PYTHON_API_URL / OMI_DESKTOP_API_URL environment variables at launch. URL overrides are kept out of app settings so a compromised page cannot repoint where your credentials are sent."
+              >
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>env-var override only</span>
               </SettingRow>
             </SectionCard>
           </>
