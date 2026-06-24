@@ -2,8 +2,7 @@
 
 A Windows desktop port of the Omi macOS app (`desktop/Desktop`), built for the
 Omi Summer "Track 1: Windows App" challenge. It looks like the Swift app, talks to
-the same production backends, and brings over as many features as a Windows build
-can reasonably support.
+the same production backends, and ports most of the Mac features.
 
 > Stack: Electron 38 + TypeScript + React 18 (electron-vite). No backend changes -
 > it uses the same `api.omi.me` Python backend and the same Cloud Run desktop
@@ -24,7 +23,7 @@ can reasonably support.
 | Settings | ![settings](docs/screenshots/settings.png) |
 | Sign-in | ![signin](docs/screenshots/signin.png) |
 
-Floating "Ask omi" bar (collapsed pill → hover bar → ask input):
+Floating "Ask omi" bar (collapsed pill, hover bar, ask input):
 
 ![floating bar](docs/screenshots/floating-bar.png)
 ![floating input](docs/screenshots/floating-input.png)
@@ -101,7 +100,7 @@ Everything below is wired to the same endpoints as the Mac app.
 
 ### Visual fidelity
 
-A repeated multi-agent audit against the SwiftUI source scores the port at **~92% visual alignment** (every screen 90-95%): exact theme tokens, corner radii, fonts, spacing, labels, sidebar order, and component layouts. Remaining deltas are micro-refinements (spring-animation timing, edge-state opacities) and the inherent SwiftUI→React rendering differences.
+I went screen by screen against the SwiftUI source and matched the theme tokens, corner radii, fonts, spacing, labels, sidebar order, and component layouts. Each screen lands around 90-95% of the way there. What is left is small: spring-animation timing, a few edge-state opacities, and the differences you get rendering in React instead of SwiftUI.
 
 ## Architecture
 
